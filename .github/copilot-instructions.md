@@ -21,7 +21,8 @@ standings. Data is shared and synced across users via Firebase.
   seasons (e.g. "2025 Season", "2026 Season"). Each season has its own
   independent set of drivers, teams, tracks, and results. A season selector
   (dropdown or list) is visible at all times so the user knows which season
-  they're editing. a season has the following additional data: unique name, year, simulation name
+  they're editing. a season has the following additional data: unique name, year, simulation name.
+  a click on new season clears the active season and updates the selected season to the new one.
 - **Countries**: add/edit/delete a country (name, flag image URL, ISO code).
 - **Drivers**: add/edit/delete a driver (first name, last name, country of nationality, team assignment). 
 - **Teams**: add/edit/delete a team (name, licence country, engine supplier).

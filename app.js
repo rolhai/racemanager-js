@@ -3,6 +3,7 @@ const state = {
   seasons: [],
   activeSeasonId: null,
   activeSeason: null,
+  isCreatingSeason: false,
   seasonUnsubscribe: null,
   selectedSection: 'drivers',
   driverEditId: null,
@@ -112,6 +113,7 @@ const app = {
       state.seasons = [];
       state.activeSeason = null;
       state.activeSeasonId = null;
+      state.isCreatingSeason = false;
       this.clearSeasonSubscription();
       this.renderSeasonSelector();
       this.renderAll();
@@ -125,7 +127,7 @@ const app = {
         ...doc.data()
       }));
 
-      if (!state.activeSeasonId && state.seasons.length) {
+      if (!state.activeSeasonId && !state.isCreatingSeason && state.seasons.length) {
         this.selectSeason(state.seasons[0].id);
       } else if (state.activeSeasonId && !state.seasons.some((season) => season.id === state.activeSeasonId)) {
         state.activeSeasonId = null;
@@ -146,6 +148,7 @@ const app = {
 
   selectSeason(seasonId) {
     if (!seasonId) return;
+    state.isCreatingSeason = false;
     state.activeSeasonId = seasonId;
     this.clearSeasonSubscription();
 
@@ -207,13 +210,17 @@ const app = {
     select.innerHTML = '<option value="">Select a season</option>' + options.join('');
     if (currentId && state.seasons.some((season) => season.id === currentId)) {
       select.value = currentId;
-    } else if (state.seasons.length) {
+    } else if (!state.isCreatingSeason && state.seasons.length) {
       select.value = state.seasons[0].id;
     }
 
     const seasonNameInput = document.getElementById('season-name');
     const seasonYearInput = document.getElementById('season-year');
     const seasonSimInput = document.getElementById('season-simulation-name');
+
+    if (state.isCreatingSeason) {
+      return;
+    }
 
     if (state.activeSeason) {
       seasonNameInput.value = state.activeSeason.name || '';
@@ -227,9 +234,14 @@ const app = {
   },
 
   prepareNewSeason() {
+    state.isCreatingSeason = true;
+    state.activeSeasonId = null;
+    state.activeSeason = null;
+    this.clearSeasonSubscription();
     document.getElementById('season-name').value = '';
     document.getElementById('season-year').value = '';
     document.getElementById('season-simulation-name').value = '';
+    this.renderSeasonSelector();
     document.getElementById('season-name').focus();
   },
 
@@ -269,6 +281,7 @@ const app = {
       this.showMessage('Season updated successfully.');
     } else {
       const ref = await firebase.firestore().collection('seasons').add(baseSeason);
+      state.isCreatingSeason = false;
       state.activeSeasonId = ref.id;
       this.showMessage('Season created successfully.');
       this.selectSeason(ref.id);
@@ -286,6 +299,7 @@ const app = {
     if (!window.confirm(`Delete ${seasonName}? This cannot be undone.`)) return;
 
     await firebase.firestore().collection('seasons').doc(state.activeSeasonId).delete();
+    state.isCreatingSeason = false;
     state.activeSeasonId = null;
     state.activeSeason = null;
     this.showMessage('Season deleted.');
