@@ -19,23 +19,34 @@ standings. Data is shared and synced across users via Firebase.
     "Log in to edit") in the header
 - **Seasons**: create, rename, delete, and switch between multiple F1
   seasons (e.g. "2025 Season", "2026 Season"). Each season has its own
-  independent set of drivers, teams, tracks, and results. A season selector
+  independent set of drivers, teams, tracks, countries, qualifying results and race results. A season selector
   (dropdown or list) is visible at all times so the user knows which season
   they're editing. a season has the following additional data: unique name, year, simulation name.
   a click on new season clears the active season and updates the selected season to the new one.
-- **Countries**: add/edit/delete a country (name, flag image URL, ISO code).
+- **Countries**: add/edit/delete a country (name, code with 3 characters).
 - **Drivers**: add/edit/delete a driver (first name, last name, country of nationality, team assignment). 
 - **Teams**: add/edit/delete a team (name, licence country, engine supplier).
 - **Tracks**: add/edit/delete a track (name, country).
-- **Event**: for each track/race, enter the qualifying results (top 3 drivers with laptime) for event types 'Q3', 'Q2' and 'Q1'. 
-  enter the race date for a sprint race (event type 'SR') and the finishing order (position 1–8) and map each position to a driver. 
+- **Qualifying Results**: for each track enter the qualifying results.
+  - the qualifying results have three sections for each event type one
+  - each section has the finishing order (position 1–3) and map each position to a driver.
+  - select event type ('Q3' or 'Q2' or 'Q1'), select track, select driver, select position and enter the laptime.
+  - event type, track and driver is unique for the qualifying result
+- **Sprint Race Results**: for each track enter the sprint race results. 
+  - enter the race date for a sprint race (event type is 'SR') and the finishing order (position 1–8) and 
+    map each position to a driver.
+  - event type, track and driver is unique for the sprint race result
+  Support:  
+  - Sprint points system (8-7-6-5-4-3-2-1 for P1–P8)
+  - DNF handling (driver scores 0, no position)
+- **Race Results**: for each track enter the race results.
+  - enter the race date for a race (event type is 'R', best laptime and finishing order (position 1–10) and
+    map each position to a driver.
+  - event type, track and driver is unique for the race result
   Support:
-  - Standard points system (8-7-6-5-4-3-2-1 for P1–P8)
-  enter the race date, best laptime and finishing order (position 1–10)
-  and map each position to a driver for event type 'R'. Support:
   - Standard points system (25-18-15-12-10-8-6-4-2-1 for P1–P10)
   - +1 point for fastest lap (optional toggle)
-  - DNF handling (driver scores 0, no position) 
+  - DNF handling (driver scores 0, no position)
 - **Season view**: list all races in the season with status (upcoming /
   completed).
 - **Championship tables**:
@@ -61,7 +72,7 @@ standings. Data is shared and synced across users via Firebase.
           - name: string
           - year: number
           - simulationName: string
-          . country: [{ id, name, flagImageUrl, isoCode}]
+          . countries: [{ id, name, code }]
           - drivers: [{ id, firstname, lastname, teamId, nationality }]
           - teams: [{ id, name, licenceCountryId, engine }]
           - tracks: [{ id, name, countryId }]

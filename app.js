@@ -269,7 +269,7 @@ const app = {
       name,
       year: Number(year),
       simulationName,
-      country: state.activeSeason ? this.getCountries(state.activeSeason) : [],
+      countries: state.activeSeason ? this.getCountries(state.activeSeason) : [],
       drivers: state.activeSeason ? state.activeSeason.drivers || [] : [],
       teams: state.activeSeason ? state.activeSeason.teams || [] : [],
       tracks: state.activeSeason ? state.activeSeason.tracks || [] : [],
@@ -318,7 +318,7 @@ const app = {
 
   getSeasonData() {
     return state.activeSeason || {
-      country: [],
+      countries: [],
       drivers: [],
       teams: [],
       tracks: [],
@@ -327,7 +327,7 @@ const app = {
   },
 
   getCountries(season = this.getSeasonData()) {
-    return season.country || season.countries || [];
+    return season.countries || [];
   },
 
   renderFilterOptions() {
@@ -424,7 +424,7 @@ const app = {
       <div class="item-card">
         <div class="item-meta">
           <div class="item-title">${this.escapeHtml(country.name)}</div>
-          <div class="item-subtitle">${this.escapeHtml(country.isoCode || '')} · ${this.escapeHtml(country.flagImageUrl || 'No flag URL')}</div>
+          <div class="item-subtitle">${this.escapeHtml(country.code || '')}</div>
         </div>
         <div class="item-actions">
           <button class="secondary-button" type="button" data-country-edit="${country.id}">Edit</button>
@@ -594,7 +594,7 @@ const app = {
       name: state.activeSeason.name,
       year: state.activeSeason.year,
       simulationName: state.activeSeason.simulationName,
-      country: this.getCountries(state.activeSeason),
+      countries: this.getCountries(state.activeSeason),
       drivers: state.activeSeason.drivers || [],
       teams: state.activeSeason.teams || [],
       tracks: state.activeSeason.tracks || [],
@@ -632,7 +632,7 @@ const app = {
         name: payload.name || 'Imported season',
         year: payload.year || new Date().getFullYear(),
         simulationName: payload.simulationName || seasonName,
-        country: payload.country || payload.countries || [],
+        countries: payload.countries || [],
         drivers: payload.drivers || [],
         teams: payload.teams || [],
         tracks: payload.tracks || [],
@@ -979,27 +979,24 @@ const app = {
     document.getElementById('country-form-title').textContent = 'Edit country';
     document.getElementById('country-id').value = country.id;
     document.getElementById('country-name-input').value = country.name || '';
-    document.getElementById('country-flag').value = country.flagImageUrl || '';
-    document.getElementById('country-iso').value = country.isoCode || '';
+    document.getElementById('country-code').value = country.code || '';
   },
 
   async saveCountry() {
     if (!this.ensureUserSignedIn()) return;
     const season = this.getSeasonData();
     const name = document.getElementById('country-name-input').value.trim();
-    const flagImageUrl = document.getElementById('country-flag').value.trim();
-    const isoCode = document.getElementById('country-iso').value.trim().toUpperCase();
+    const code = document.getElementById('country-code').value.trim().toUpperCase();
 
-    if (!name || !flagImageUrl || !isoCode) {
-      this.showMessage('Country name, flag URL, and ISO code are required.', true);
+    if (!name || code.length !== 3) {
+      this.showMessage('Country name and a 3-character code are required.', true);
       return;
     }
 
     const country = {
       id: state.countryEditId || this.generateId(),
       name,
-      flagImageUrl,
-      isoCode
+      code
     };
 
     const countries = [...this.getCountries(season)];
@@ -1010,7 +1007,12 @@ const app = {
       countries.push(country);
     }
 
-    await this.updateSeasonDocument({ country: countries });
+    await this.updateSeasonDocument({ countries });
+    state.activeSeason = { ...season, countries };
+    state.seasons = state.seasons.map((entry) =>
+      entry.id === state.activeSeasonId ? { ...entry, countries } : entry
+    );
+    this.renderAll();
     this.resetCountryForm();
     this.showMessage('Country saved.');
   },
@@ -1023,7 +1025,7 @@ const app = {
     if (!window.confirm(`Delete ${country.name}?`)) return;
 
     const countries = this.getCountries(season).filter((entry) => entry.id !== countryId);
-    await this.updateSeasonDocument({ country: countries });
+    await this.updateSeasonDocument({ countries });
     this.showMessage('Country deleted.');
   },
 
