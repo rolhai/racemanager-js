@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Race Manager</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Motorsport dashboard</p>
+          <h1>Race Manager</h1>
+        </div>
+        <div class="header-actions">
+          <span id="auth-indicator" class="auth-indicator">Log in to edit</span>
+          <button id="login-button" class="primary-button">Log in</button>
+          <button id="logout-button" class="secondary-button hidden">Log out</button>
+        </div>
+      </header>
+
+      <div class="toolbar card">
+        <div class="season-controls">
+          <label for="season-select">Season</label>
+          <select id="season-select"></select>
+          <button id="create-season-button" class="secondary-button" data-editable="true">New season</button>
+          <button id="rename-season-button" class="secondary-button" data-editable="true">Rename</button>
+          <button id="delete-season-button" class="danger-button" data-editable="true">Delete</button>
+          <button id="export-season-button" class="secondary-button" type="button">Export JSON</button>
+          <button id="import-season-button" class="secondary-button" type="button">Import JSON</button>
+          <input id="json-import-input" type="file" accept=".json,application/json" class="hidden" />
+        </div>
+
+        <div class="season-form" id="season-form">
+          <div class="field-group compact">
+            <label for="season-name">Name</label>
+            <input id="season-name" type="text" placeholder="2026 Season" />
+          </div>
+          <div class="field-group compact">
+            <label for="season-year">Year</label>
+            <input id="season-year" type="number" min="1950" max="2100" placeholder="2026" />
+          </div>
+          <div class="field-group compact">
+            <label for="season-simulation-name">Simulation name</label>
+            <input id="season-simulation-name" type="text" placeholder="F1 2026" />
+          </div>
+          <button id="save-season-button" class="primary-button" data-editable="true">Save season</button>
+        </div>
+      </div>
+
+      <nav class="section-nav card" aria-label="Main navigation">
+        <button class="nav-link active" data-section="drivers">Drivers</button>
+        <button class="nav-link" data-section="teams">Teams</button>
+        <button class="nav-link" data-section="tracks">Tracks</button>
+        <button class="nav-link" data-section="countries">Countries</button>
+        <button class="nav-link" data-section="results">Race Results</button>
+        <button class="nav-link" data-section="standings">Standings</button>
+      </nav>
+
+      <main class="content">
+        <section id="section-drivers" class="panel active panel-grid">
+          <div class="list-panel card">
+            <div class="panel-header">
+              <h2>Drivers</h2>
+              <button id="add-driver-button" class="primary-button">Add driver</button>
+            </div>
+            <div id="drivers-list" class="item-list"></div>
+          </div>
+
+          <div class="form-panel card">
+            <h3 id="driver-form-title">Add driver</h3>
+            <form id="driver-form" data-editable-form="true">
+              <input id="driver-id" type="hidden" />
+              <div class="field-group">
+                <label for="driver-firstname">First name</label>
+                <input id="driver-firstname" type="text" required />
+              </div>
+              <div class="field-group">
+                <label for="driver-lastname">Last name</label>
+                <input id="driver-lastname" type="text" required />
+              </div>
+              <div class="field-group">
+                <label for="driver-nationality">Nationality</label>
+                <select id="driver-nationality"></select>
+              </div>
+              <div class="field-group">
+                <label for="driver-team">Team</label>
+                <select id="driver-team"></select>
+              </div>
+              <div class="action-row">
+                <button type="submit" class="primary-button">Save driver</button>
+                <button type="button" id="cancel-driver-edit" class="secondary-button">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section id="section-teams" class="panel panel-grid hidden">
+          <div class="list-panel card">
+            <div class="panel-header">
+              <h2>Teams</h2>
+              <button id="add-team-button" class="primary-button">Add team</button>
+            </div>
+            <div id="teams-list" class="item-list"></div>
+          </div>
+
+          <div class="form-panel card">
+            <h3 id="team-form-title">Add team</h3>
+            <form id="team-form" data-editable-form="true">
+              <input id="team-id" type="hidden" />
+              <div class="field-group">
+                <label for="team-name">Name</label>
+                <input id="team-name" type="text" required />
+              </div>
+              <div class="field-group">
+                <label for="team-licence-country">Licence country</label>
+                <select id="team-licence-country"></select>
+              </div>
+              <div class="field-group">
+                <label for="team-engine">Engine supplier</label>
+                <input id="team-engine" type="text" placeholder="Mercedes, Ferrari..." required />
+              </div>
+              <div class="action-row">
+                <button type="submit" class="primary-button">Save team</button>
+                <button type="button" id="cancel-team-edit" class="secondary-button">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section id="section-tracks" class="panel panel-grid hidden">
+          <div class="list-panel card">
+            <div class="panel-header">
+              <h2>Tracks</h2>
+              <button id="add-track-button" class="primary-button">Add track</button>
+            </div>
+            <div id="tracks-list" class="item-list"></div>
+          </div>
+
+          <div class="form-panel card">
+            <h3 id="track-form-title">Add track</h3>
+            <form id="track-form" data-editable-form="true">
+              <input id="track-id" type="hidden" />
+              <div class="field-group">
+                <label for="track-name">Name</label>
+                <input id="track-name-input" type="text" required />
+              </div>
+              <div class="field-group">
+                <label for="track-country">Country</label>
+                <select id="track-country"></select>
+              </div>
+              <div class="action-row">
+                <button type="submit" class="primary-button">Save track</button>
+                <button type="button" id="cancel-track-edit" class="secondary-button">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section id="section-countries" class="panel panel-grid hidden">
+          <div class="list-panel card">
+            <div class="panel-header">
+              <h2>Countries</h2>
+              <button id="add-country-button" class="primary-button">Add country</button>
+            </div>
+            <div id="countries-list" class="item-list"></div>
+          </div>
+
+          <div class="form-panel card">
+            <h3 id="country-form-title">Add country</h3>
+            <form id="country-form" data-editable-form="true">
+              <input id="country-id" type="hidden" />
+              <div class="field-group">
+                <label for="country-name">Name</label>
+                <input id="country-name-input" type="text" required />
+              </div>
+              <div class="field-group">
+                <label for="country-flag">Flag image URL</label>
+                <input id="country-flag" type="url" placeholder="https://..." required />
+              </div>
+              <div class="field-group">
+                <label for="country-iso">ISO code</label>
+                <input id="country-iso" type="text" maxlength="3" required />
+              </div>
+              <div class="action-row">
+                <button type="submit" class="primary-button">Save country</button>
+                <button type="button" id="cancel-country-edit" class="secondary-button">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section id="section-results" class="panel panel-grid hidden">
+          <div class="list-panel card">
+            <div class="panel-header">
+              <h2>Race results</h2>
+              <button id="add-result-button" class="primary-button">Add result</button>
+            </div>
+            <div id="results-list" class="result-list"></div>
+          </div>
+
+          <div class="form-panel card">
+            <h3 id="result-form-title">Add race result</h3>
+            <form id="result-form" data-editable-form="true">
+              <input id="result-id" type="hidden" />
+              <div class="field-group">
+                <label for="result-track">Track</label>
+                <select id="result-track"></select>
+              </div>
+              <div class="field-group">
+                <label for="result-date">Date</label>
+                <input id="result-date" type="date" required />
+              </div>
+              <div class="field-group">
+                <label for="result-event-type">Event type</label>
+                <select id="result-event-type">
+                  <option value="Q1">Q1</option>
+                  <option value="Q2">Q2</option>
+                  <option value="Q3">Q3</option>
+                  <option value="SR">Sprint</option>
+                  <option value="R">Race</option>
+                </select>
+              </div>
+              <div id="result-positions" class="position-grid"></div>
+              <div id="fastest-lap-container" class="field-group hidden">
+                <label>
+                  <input id="result-fastest-lap-toggle" type="checkbox" />
+                  Award +1 point for fastest lap
+                </label>
+                <label for="result-fastest-lap-driver">Fastest lap driver</label>
+                <select id="result-fastest-lap-driver"></select>
+              </div>
+              <div class="action-row">
+                <button type="submit" class="primary-button">Save result</button>
+                <button type="button" id="cancel-result-edit" class="secondary-button">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section id="section-standings" class="panel hidden">
+          <div class="standings-grid">
+            <div class="card">
+              <h2>Drivers' Championship</h2>
+              <table class="standings-table">
+                <thead>
+                  <tr>
+                    <th>Pos</th>
+                    <th>Driver</th>
+                    <th>Team</th>
+                    <th>Pts</th>
+                    <th>Wins</th>
+                    <th>Podiums</th>
+                  </tr>
+                </thead>
+                <tbody id="drivers-standings-body"></tbody>
+              </table>
+            </div>
+
+            <div class="card">
+              <h2>Constructors' Championship</h2>
+              <table class="standings-table">
+                <thead>
+                  <tr>
+                    <th>Pos</th>
+                    <th>Team</th>
+                    <th>Pts</th>
+                  </tr>
+                </thead>
+                <tbody id="constructors-standings-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="login-modal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-content card">
+        <button id="close-login-modal" class="close-button" type="button" aria-label="Close dialog">×</button>
+        <h2>Log in</h2>
+        <form id="login-form">
+          <div class="field-group">
+            <label for="login-email">Email</label>
+            <input id="login-email" type="email" required />
+          </div>
+          <div class="field-group">
+            <label for="login-password">Password</label>
+            <input id="login-password" type="password" required />
+          </div>
+          <div class="action-row column">
+            <button type="submit" class="primary-button">Log in</button>
+            <button id="forgot-password-button" type="button" class="text-button">Forgot password?</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="message-banner" class="message-banner hidden"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
