@@ -70,6 +70,9 @@ const app = {
       event.preventDefault();
       this.saveDriver();
     });
+    ['driver-firstname', 'driver-lastname'].forEach((inputId) => {
+      document.getElementById(inputId).addEventListener('input', () => this.validateDriverNameUniqueness());
+    });
     document.getElementById('team-form').addEventListener('submit', (event) => {
       event.preventDefault();
       this.saveTeam();
@@ -307,6 +310,7 @@ const app = {
 
   renderAll() {
     this.renderFilterOptions();
+    this.validateDriverNameUniqueness();
     this.renderCountries();
     this.renderDrivers();
     this.renderTeams();
@@ -785,6 +789,7 @@ const app = {
   resetDriverForm() {
     state.driverEditId = null;
     document.getElementById('driver-form').reset();
+    this.validateDriverNameUniqueness();
     document.getElementById('driver-form-title').textContent = 'Add driver';
     document.getElementById('driver-id').value = '';
     this.renderFilterOptions();
@@ -801,6 +806,34 @@ const app = {
     document.getElementById('driver-lastname').value = driver.lastname || '';
     document.getElementById('driver-nationality').value = driver.nationality || '';
     document.getElementById('driver-team').value = driver.teamId || '';
+    this.validateDriverNameUniqueness();
+  },
+
+  validateDriverNameUniqueness() {
+    const firstNameInput = document.getElementById('driver-firstname');
+    const lastNameInput = document.getElementById('driver-lastname');
+    const normalizedFirstName = firstNameInput.value.trim().toLocaleLowerCase();
+    const normalizedLastName = lastNameInput.value.trim().toLocaleLowerCase();
+    const duplicateExists = normalizedFirstName && normalizedLastName
+      && (this.getSeasonData().drivers || []).some((driver) =>
+        driver.id !== state.driverEditId
+        && (driver.firstname || '').trim().toLocaleLowerCase() === normalizedFirstName
+        && (driver.lastname || '').trim().toLocaleLowerCase() === normalizedLastName
+      );
+    const message = duplicateExists ? 'the driver already exists' : '';
+
+    [firstNameInput, lastNameInput].forEach((input) => {
+      input.setCustomValidity(message);
+      if (duplicateExists) {
+        input.setAttribute('aria-invalid', 'true');
+      } else {
+        input.removeAttribute('aria-invalid');
+      }
+    });
+    document.getElementById('driver-firstname-error').classList.toggle('hidden', !duplicateExists);
+    document.getElementById('driver-lastname-error').classList.toggle('hidden', !duplicateExists);
+
+    return !duplicateExists;
   },
 
   async saveDriver() {
@@ -813,6 +846,11 @@ const app = {
 
     if (!firstName || !lastName) {
       this.showMessage('Driver first and last name are required.', true);
+      return;
+    }
+
+    if (!this.validateDriverNameUniqueness()) {
+      document.getElementById('driver-firstname').reportValidity();
       return;
     }
 

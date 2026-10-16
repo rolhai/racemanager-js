@@ -215,6 +215,11 @@ label {
   font-weight: 600;
 }
 
+.field-error {
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
 input, select {
   width: 100%;
   background: rgba(255, 255, 255, 0.04);
@@ -222,6 +227,10 @@ input, select {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 11px 12px;
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--danger);
 }
 
 select {
