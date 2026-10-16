@@ -114,6 +114,7 @@
               <div class="field-group">
                 <label for="team-name">Name</label>
                 <input id="team-name" type="text" required />
+                <small id="team-name-error" class="field-error hidden" role="alert">the team already exists</small>
               </div>
               <div class="field-group">
                 <label for="team-licence-country">Licence country</label>
@@ -122,6 +123,7 @@
               <div class="field-group">
                 <label for="team-engine">Engine supplier</label>
                 <input id="team-engine" type="text" placeholder="Mercedes, Ferrari..." required />
+                <small id="team-engine-error" class="field-error hidden" role="alert">the team already exists</small>
               </div>
               <div class="action-row">
                 <button type="submit" class="primary-button">Save team</button>

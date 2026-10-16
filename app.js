@@ -77,6 +77,9 @@ const app = {
       event.preventDefault();
       this.saveTeam();
     });
+    ['team-name', 'team-engine'].forEach((inputId) => {
+      document.getElementById(inputId).addEventListener('input', () => this.validateTeamUniqueness());
+    });
     document.getElementById('track-form').addEventListener('submit', (event) => {
       event.preventDefault();
       this.saveTrack();
@@ -311,6 +314,7 @@ const app = {
   renderAll() {
     this.renderFilterOptions();
     this.validateDriverNameUniqueness();
+    this.validateTeamUniqueness();
     this.renderCountries();
     this.renderDrivers();
     this.renderTeams();
@@ -890,6 +894,7 @@ const app = {
   resetTeamForm() {
     state.teamEditId = null;
     document.getElementById('team-form').reset();
+    this.validateTeamUniqueness();
     document.getElementById('team-form-title').textContent = 'Add team';
     document.getElementById('team-id').value = '';
     this.renderFilterOptions();
@@ -905,6 +910,34 @@ const app = {
     document.getElementById('team-name').value = team.name || '';
     document.getElementById('team-licence-country').value = team.licenceCountryId || '';
     document.getElementById('team-engine').value = team.engine || '';
+    this.validateTeamUniqueness();
+  },
+
+  validateTeamUniqueness() {
+    const nameInput = document.getElementById('team-name');
+    const engineInput = document.getElementById('team-engine');
+    const normalizedName = nameInput.value.trim().toLocaleLowerCase();
+    const normalizedEngine = engineInput.value.trim().toLocaleLowerCase();
+    const duplicateExists = normalizedName && normalizedEngine
+      && (this.getSeasonData().teams || []).some((team) =>
+        team.id !== state.teamEditId
+        && (team.name || '').trim().toLocaleLowerCase() === normalizedName
+        && (team.engine || '').trim().toLocaleLowerCase() === normalizedEngine
+      );
+    const message = duplicateExists ? 'the team already exists' : '';
+
+    [nameInput, engineInput].forEach((input) => {
+      input.setCustomValidity(message);
+      if (duplicateExists) {
+        input.setAttribute('aria-invalid', 'true');
+      } else {
+        input.removeAttribute('aria-invalid');
+      }
+    });
+    document.getElementById('team-name-error').classList.toggle('hidden', !duplicateExists);
+    document.getElementById('team-engine-error').classList.toggle('hidden', !duplicateExists);
+
+    return !duplicateExists;
   },
 
   async saveTeam() {
@@ -915,6 +948,11 @@ const app = {
     const engine = document.getElementById('team-engine').value.trim();
     if (!name || !engine) {
       this.showMessage('Team name and engine supplier are required.', true);
+      return;
+    }
+
+    if (!this.validateTeamUniqueness()) {
+      document.getElementById('team-name').reportValidity();
       return;
     }
 
