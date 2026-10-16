@@ -210,6 +210,7 @@
               <div class="field-group">
                 <label for="result-track">Track</label>
                 <select id="result-track"></select>
+                <small id="result-track-error" class="field-error hidden" role="alert">the race result already exists</small>
               </div>
               <div class="field-group">
                 <label for="result-date">Date</label>
@@ -224,6 +225,7 @@
                   <option value="SR">Sprint</option>
                   <option value="R">Race</option>
                 </select>
+                <small id="result-event-type-error" class="field-error hidden" role="alert">the race result already exists</small>
               </div>
               <div id="result-positions" class="position-grid"></div>
               <div id="fastest-lap-container" class="field-group hidden">

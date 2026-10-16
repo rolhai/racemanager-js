@@ -229,7 +229,8 @@ input, select {
   padding: 11px 12px;
 }
 
-input[aria-invalid="true"] {
+input[aria-invalid="true"],
+select[aria-invalid="true"] {
   border-color: var(--danger);
 }
 

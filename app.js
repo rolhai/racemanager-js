@@ -109,8 +109,12 @@ const app = {
     document.getElementById('cancel-country-edit').addEventListener('click', () => this.resetCountryForm());
     document.getElementById('cancel-result-edit').addEventListener('click', () => this.resetResultForm());
 
-    document.getElementById('result-event-type').addEventListener('change', () => this.renderResultPositions());
+    document.getElementById('result-event-type').addEventListener('change', () => {
+      this.validateResultUniqueness();
+      this.renderResultPositions();
+    });
     document.getElementById('result-track').addEventListener('change', () => {
+      this.validateResultUniqueness();
       const trackName = this.getTrackName(document.getElementById('result-track').value);
       if (trackName && !document.getElementById('result-date').value) {
         document.getElementById('result-date').focus();
@@ -321,6 +325,7 @@ const app = {
     this.validateTeamUniqueness();
     this.validateTrackUniqueness();
     this.validateCountryUniqueness();
+    this.validateResultUniqueness();
     this.renderCountries();
     this.renderDrivers();
     this.renderTeams();
@@ -412,9 +417,11 @@ const app = {
 
   trackOptionsMarkup() {
     const season = this.getSeasonData();
-    return (season.tracks || []).map((track) => `
+    const tracks = season.tracks || [];
+    if (!tracks.length) return '<option value="">No tracks added</option>';
+    return '<option value="">Select a track</option>' + tracks.map((track) => `
       <option value="${track.id}">${this.escapeHtml(track.name)}</option>
-    `).join('') || '<option value="">No tracks added</option>';
+    `).join('');
   },
 
   driverOptionsMarkup() {
@@ -1189,6 +1196,7 @@ const app = {
   resetResultForm() {
     state.resultEditId = null;
     document.getElementById('result-form').reset();
+    this.validateResultUniqueness();
     document.getElementById('result-form-title').textContent = 'Add race result';
     document.getElementById('result-id').value = '';
     this.renderResultPositions();
@@ -1206,7 +1214,31 @@ const app = {
     document.getElementById('result-date').value = result.date || '';
     document.getElementById('result-event-type').value = result.eventType || 'R';
     document.getElementById('result-fastest-lap-driver').value = result.fastestLapDriverId || '';
+    this.validateResultUniqueness();
     this.renderResultPositions(result);
+  },
+
+  validateResultUniqueness() {
+    const trackInput = document.getElementById('result-track');
+    const eventTypeInput = document.getElementById('result-event-type');
+    const trackId = trackInput.value;
+    const eventType = eventTypeInput.value;
+    const duplicateExists = trackId && eventType
+      && (this.getSeasonData().results || []).some((result) =>
+        result.id !== state.resultEditId
+        && result.trackId === trackId
+        && result.eventType === eventType
+      );
+    const message = duplicateExists ? 'the race result already exists' : '';
+
+    [trackInput, eventTypeInput].forEach((input) => {
+      input.setCustomValidity(message);
+      input.toggleAttribute('aria-invalid', Boolean(duplicateExists));
+    });
+    document.getElementById('result-track-error').classList.toggle('hidden', !duplicateExists);
+    document.getElementById('result-event-type-error').classList.toggle('hidden', !duplicateExists);
+
+    return !duplicateExists;
   },
 
   renderResultPositions(result = null) {
@@ -1278,6 +1310,17 @@ const app = {
 
     if (!trackId || !date) {
       this.showMessage('Track and date are required.', true);
+      return;
+    }
+
+    if (!this.validateResultUniqueness()) {
+      const trackInput = document.getElementById('result-track');
+      const eventTypeInput = document.getElementById('result-event-type');
+      if (!trackInput.checkValidity()) {
+        trackInput.reportValidity();
+      } else {
+        eventTypeInput.reportValidity();
+      }
       return;
     }
 
