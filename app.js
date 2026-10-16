@@ -84,6 +84,7 @@ const app = {
       event.preventDefault();
       this.saveTrack();
     });
+    document.getElementById('track-name-input').addEventListener('input', () => this.validateTrackUniqueness());
     document.getElementById('country-form').addEventListener('submit', (event) => {
       event.preventDefault();
       this.saveCountry();
@@ -315,6 +316,7 @@ const app = {
     this.renderFilterOptions();
     this.validateDriverNameUniqueness();
     this.validateTeamUniqueness();
+    this.validateTrackUniqueness();
     this.renderCountries();
     this.renderDrivers();
     this.renderTeams();
@@ -991,6 +993,7 @@ const app = {
   resetTrackForm() {
     state.trackEditId = null;
     document.getElementById('track-form').reset();
+    this.validateTrackUniqueness();
     document.getElementById('track-form-title').textContent = 'Add track';
     document.getElementById('track-id').value = '';
     this.renderFilterOptions();
@@ -1005,6 +1008,28 @@ const app = {
     document.getElementById('track-id').value = track.id;
     document.getElementById('track-name-input').value = track.name || '';
     document.getElementById('track-country').value = track.countryId || '';
+    this.validateTrackUniqueness();
+  },
+
+  validateTrackUniqueness() {
+    const nameInput = document.getElementById('track-name-input');
+    const normalizedName = nameInput.value.trim().toLocaleLowerCase();
+    const duplicateExists = normalizedName
+      && (this.getSeasonData().tracks || []).some((track) =>
+        track.id !== state.trackEditId
+        && (track.name || '').trim().toLocaleLowerCase() === normalizedName
+      );
+    const message = duplicateExists ? 'the track already exists' : '';
+
+    nameInput.setCustomValidity(message);
+    if (duplicateExists) {
+      nameInput.setAttribute('aria-invalid', 'true');
+    } else {
+      nameInput.removeAttribute('aria-invalid');
+    }
+    document.getElementById('track-name-error').classList.toggle('hidden', !duplicateExists);
+
+    return !duplicateExists;
   },
 
   async saveTrack() {
@@ -1014,6 +1039,11 @@ const app = {
     const countryId = document.getElementById('track-country').value;
     if (!name) {
       this.showMessage('Track name is required.', true);
+      return;
+    }
+
+    if (!this.validateTrackUniqueness()) {
+      document.getElementById('track-name-input').reportValidity();
       return;
     }
 
