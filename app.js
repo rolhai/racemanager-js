@@ -444,7 +444,10 @@ const app = {
   renderDrivers() {
     const list = document.getElementById('drivers-list');
     const season = this.getSeasonData();
-    const drivers = season.drivers || [];
+    const drivers = [...(season.drivers || [])].sort((firstDriver, secondDriver) => {
+      const lastNameOrder = (firstDriver.lastname || '').localeCompare(secondDriver.lastname || '', undefined, { sensitivity: 'base' });
+      return lastNameOrder || (firstDriver.firstname || '').localeCompare(secondDriver.firstname || '', undefined, { sensitivity: 'base' });
+    });
 
     if (!drivers.length) {
       list.innerHTML = '<div class="empty-state">No drivers in this season yet.</div>';
