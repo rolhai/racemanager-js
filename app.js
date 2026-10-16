@@ -89,6 +89,9 @@ const app = {
       event.preventDefault();
       this.saveCountry();
     });
+    ['country-name-input', 'country-code'].forEach((inputId) => {
+      document.getElementById(inputId).addEventListener('input', () => this.validateCountryUniqueness());
+    });
     document.getElementById('result-form').addEventListener('submit', (event) => {
       event.preventDefault();
       this.saveResult();
@@ -317,6 +320,7 @@ const app = {
     this.validateDriverNameUniqueness();
     this.validateTeamUniqueness();
     this.validateTrackUniqueness();
+    this.validateCountryUniqueness();
     this.renderCountries();
     this.renderDrivers();
     this.renderTeams();
@@ -1081,6 +1085,7 @@ const app = {
   resetCountryForm() {
     state.countryEditId = null;
     document.getElementById('country-form').reset();
+    this.validateCountryUniqueness();
     document.getElementById('country-form-title').textContent = 'Add country';
     document.getElementById('country-id').value = '';
     this.renderFilterOptions();
@@ -1095,6 +1100,32 @@ const app = {
     document.getElementById('country-id').value = country.id;
     document.getElementById('country-name-input').value = country.name || '';
     document.getElementById('country-code').value = country.code || '';
+    this.validateCountryUniqueness();
+  },
+
+  validateCountryUniqueness() {
+    const nameInput = document.getElementById('country-name-input');
+    const codeInput = document.getElementById('country-code');
+    const normalizedName = nameInput.value.trim().toLocaleLowerCase();
+    const normalizedCode = codeInput.value.trim().toLocaleUpperCase();
+    const countries = this.getCountries();
+    const duplicateNameExists = normalizedName && countries.some((country) =>
+      country.id !== state.countryEditId
+      && (country.name || '').trim().toLocaleLowerCase() === normalizedName
+    );
+    const duplicateCodeExists = normalizedCode && countries.some((country) =>
+      country.id !== state.countryEditId
+      && (country.code || '').trim().toLocaleUpperCase() === normalizedCode
+    );
+
+    nameInput.setCustomValidity(duplicateNameExists ? 'the country already exists' : '');
+    codeInput.setCustomValidity(duplicateCodeExists ? 'the country with this code already exists' : '');
+    nameInput.toggleAttribute('aria-invalid', Boolean(duplicateNameExists));
+    codeInput.toggleAttribute('aria-invalid', Boolean(duplicateCodeExists));
+    document.getElementById('country-name-error').classList.toggle('hidden', !duplicateNameExists);
+    document.getElementById('country-code-error').classList.toggle('hidden', !duplicateCodeExists);
+
+    return !duplicateNameExists && !duplicateCodeExists;
   },
 
   async saveCountry() {
@@ -1105,6 +1136,17 @@ const app = {
 
     if (!name || code.length !== 3) {
       this.showMessage('Country name and a 3-character code are required.', true);
+      return;
+    }
+
+    if (!this.validateCountryUniqueness()) {
+      const nameInput = document.getElementById('country-name-input');
+      const codeInput = document.getElementById('country-code');
+      if (!nameInput.checkValidity()) {
+        nameInput.reportValidity();
+      } else {
+        codeInput.reportValidity();
+      }
       return;
     }
 

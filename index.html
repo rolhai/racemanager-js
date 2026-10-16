@@ -179,10 +179,12 @@
               <div class="field-group">
                 <label for="country-name">Name</label>
                 <input id="country-name-input" type="text" required />
+                <small id="country-name-error" class="field-error hidden" role="alert">the country already exists</small>
               </div>
               <div class="field-group">
                 <label for="country-code">Code</label>
                 <input id="country-code" type="text" maxlength="3" minlength="3" required />
+                <small id="country-code-error" class="field-error hidden" role="alert">the country with this code already exists</small>
               </div>
               <div class="action-row">
                 <button type="submit" class="primary-button">Save country</button>
