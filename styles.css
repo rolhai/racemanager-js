@@ -224,6 +224,15 @@ input, select {
   padding: 11px 12px;
 }
 
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: var(--panel);
+  color: var(--text);
+}
+
 input:focus, select:focus {
   outline: 2px solid rgba(225, 6, 0, 0.45);
   border-color: rgba(225, 6, 0, 0.5);
