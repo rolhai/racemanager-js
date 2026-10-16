@@ -478,7 +478,9 @@ const app = {
   renderTeams() {
     const list = document.getElementById('teams-list');
     const season = this.getSeasonData();
-    const teams = season.teams || [];
+    const teams = [...(season.teams || [])].sort((firstTeam, secondTeam) =>
+      (firstTeam.name || '').localeCompare(secondTeam.name || '', undefined, { sensitivity: 'base' })
+    );
 
     if (!teams.length) {
       list.innerHTML = '<div class="empty-state">No teams yet. Add one to start building the grid.</div>';
