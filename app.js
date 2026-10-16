@@ -413,7 +413,9 @@ const app = {
   renderCountries() {
     const list = document.getElementById('countries-list');
     const season = this.getSeasonData();
-    const countries = this.getCountries(season);
+    const countries = [...this.getCountries(season)].sort((firstCountry, secondCountry) =>
+      (firstCountry.name || '').localeCompare(secondCountry.name || '', undefined, { sensitivity: 'base' })
+    );
 
     if (!countries.length) {
       list.innerHTML = '<div class="empty-state">No countries yet. Add the first country to start building the season.</div>';
