@@ -511,7 +511,9 @@ const app = {
   renderTracks() {
     const list = document.getElementById('tracks-list');
     const season = this.getSeasonData();
-    const tracks = season.tracks || [];
+    const tracks = [...(season.tracks || [])].sort((firstTrack, secondTrack) =>
+      (firstTrack.name || '').localeCompare(secondTrack.name || '', undefined, { sensitivity: 'base' })
+    );
 
     if (!tracks.length) {
       list.innerHTML = '<div class="empty-state">No tracks in this season yet.</div>';
