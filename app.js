@@ -96,6 +96,11 @@ const app = {
       event.preventDefault();
       this.saveResult();
     });
+    document.getElementById('result-positions').addEventListener('input', (event) => {
+      if (event.target.matches('[data-laptime-mask]')) {
+        this.applyLapTimeMask(event.target);
+      }
+    });
 
     document.getElementById('add-driver-button').addEventListener('click', () => this.resetDriverForm());
     document.getElementById('add-team-button').addEventListener('click', () => this.resetTeamForm());
@@ -865,6 +870,27 @@ const app = {
     return null;
   },
 
+  applyLapTimeMask(input) {
+    const caretPosition = input.selectionStart ?? input.value.length;
+    const digitsBeforeCaret = input.value.slice(0, caretPosition).replace(/\D/g, '').length;
+    let digits = input.value.replace(/\D/g, '').slice(0, 6);
+    if (digits.length > 1 && Number(digits[1]) > 5) {
+      digits = digits.slice(0, 1);
+    }
+    let maskedValue = digits.slice(0, 1);
+
+    if (digits.length > 1) maskedValue += `:${digits.slice(1, 3)}`;
+    if (digits.length > 3) maskedValue += `.${digits.slice(3)}`;
+
+    input.value = maskedValue;
+    const maskedCaretPosition = digitsBeforeCaret < 2
+      ? digitsBeforeCaret
+      : digitsBeforeCaret < 4
+        ? digitsBeforeCaret + 1
+        : digitsBeforeCaret + 2;
+    input.setSelectionRange(maskedCaretPosition, maskedCaretPosition);
+  },
+
   getDriverName(driverId) {
     const season = this.getSeasonData();
     const driver = (season.drivers || []).find((entry) => entry.id === driverId);
@@ -1337,7 +1363,7 @@ const app = {
           </div>
           <div class="field-group">
             <label>Laptime</label>
-            <input id="pos-lap-${positionNumber}" type="text" value="${this.escapeAttribute(lapValue)}" placeholder="1:36.123" />
+            <input id="pos-lap-${positionNumber}" type="text" inputmode="numeric" maxlength="8" pattern="\\d:[0-5]\\d\\.\\d{3}" title="Enter a lap time as m:ss.mmm, for example 1:36.123" data-laptime-mask value="${this.escapeAttribute(lapValue)}" placeholder="1:36.123" />
           </div>
           <label><input id="pos-dnf-${positionNumber}" type="checkbox" ${dnfChecked} /> DNF</label>
         </div>
@@ -1345,6 +1371,7 @@ const app = {
     }).join('');
 
     document.getElementById('result-positions').innerHTML = cards;
+    document.querySelectorAll('[data-laptime-mask]').forEach((input) => this.applyLapTimeMask(input));
     Array.from({ length: positionCount }, (_, index) => {
       const positionNumber = index + 1;
       const existingPosition = existingPositions.find((entry) => Number(entry.position) === positionNumber) || {};
