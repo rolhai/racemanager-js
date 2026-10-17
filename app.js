@@ -432,11 +432,15 @@ const app = {
   trackOptionsMarkup() {
     const season = this.getSeasonData();
     const tracks = [...(season.tracks || [])].sort((firstTrack, secondTrack) =>
-      (firstTrack.name || '').localeCompare(secondTrack.name || '', undefined, { sensitivity: 'base' })
+      this.getCountryName(firstTrack.countryId).localeCompare(
+        this.getCountryName(secondTrack.countryId),
+        undefined,
+        { sensitivity: 'base' }
+      ) || (firstTrack.name || '').localeCompare(secondTrack.name || '', undefined, { sensitivity: 'base' })
     );
     if (!tracks.length) return '<option value="">No tracks added</option>';
     return '<option value="">Select a track</option>' + tracks.map((track) => `
-      <option value="${track.id}">${this.escapeHtml(track.name)}</option>
+      <option value="${track.id}">${this.escapeHtml(this.getCountryName(track.countryId))} - ${this.escapeHtml(track.name)}</option>
     `).join('');
   },
 
