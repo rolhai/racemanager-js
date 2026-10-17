@@ -569,6 +569,13 @@ const app = {
     const season = this.getSeasonData();
     const results = season.results || [];
     const eventTypeOrder = { Q1: 0, Q2: 1, Q3: 2, SR: 3, R: 4 };
+    const eventTypeLabels = {
+      Q1: 'Qualifying 1',
+      Q2: 'Qualifying 2',
+      Q3: 'Qualifying 3',
+      SR: 'Sprint Race',
+      R: 'Race'
+    };
 
     if (!results.length) {
       list.innerHTML = '<div class="empty-state">No race results entered yet.</div>';
@@ -607,7 +614,7 @@ const app = {
       return `
         <div class="result-card">
           <div class="result-header">
-            <strong>${this.escapeHtml(this.getTrackName(result.trackId))} - ${this.escapeHtml(result.eventType)}</strong>
+            <strong>${this.escapeHtml(this.getTrackName(result.trackId))} - ${this.escapeHtml(eventTypeLabels[result.eventType] || result.eventType)}</strong>
             <span class="result-details">${this.escapeHtml(result.date || 'No date')}</span>
           </div>
           <div class="result-table-wrapper">
