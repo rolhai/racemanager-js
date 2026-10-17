@@ -363,6 +363,23 @@ input:focus, select:focus {
   margin-top: 0;
 }
 
+.result-laptime {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fastest-lap-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  flex: 0 0 auto;
+}
+
 .result-actions {
   margin-top: 20px;
 }

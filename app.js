@@ -387,15 +387,10 @@ const app = {
       if (result) resultTrack.value = result.trackId || '';
     }
 
-    const fastestLapDriver = document.getElementById('result-fastest-lap-driver');
     const fastestLapToggle = document.getElementById('result-fastest-lap-toggle');
-    fastestLapDriver.innerHTML = '<option value="">No fastest lap</option>' + this.driverOptionsMarkup();
     if (state.resultEditId) {
       const result = season.results.find((entry) => entry.id === state.resultEditId);
-      if (result) {
-        fastestLapToggle.checked = Boolean(result.fastestLapAwarded);
-        if (result.fastestLapDriverId) fastestLapDriver.value = result.fastestLapDriverId;
-      }
+      fastestLapToggle.checked = Boolean(result && result.fastestLapAwarded);
     } else {
       fastestLapToggle.checked = false;
     }
@@ -590,6 +585,8 @@ const app = {
     });
 
     list.innerHTML = sortedResults.map((result) => {
+      const hasLapTimes = result.eventType === 'R' || result.eventType === 'SR';
+      const fastestLapPosition = hasLapTimes ? this.getFastestLapPosition(result) : null;
       const positions = [...(result.positions || [])]
         .sort((firstPosition, secondPosition) => {
           if (firstPosition.dnf) return secondPosition.dnf ? 0 : 1;
@@ -600,13 +597,16 @@ const app = {
           const driver = (season.drivers || []).find((entry) => entry.id === position.driverId);
           const team = driver && (season.teams || []).find((entry) => entry.id === driver.teamId);
           const driverName = driver ? `${driver.firstname} ${driver.lastname}` : '—';
+          const fastestLapIcon = fastestLapPosition === position
+            ? '<svg class="fastest-lap-icon" viewBox="0 0 24 24" role="img" aria-label="Fastest lap" title="Fastest lap"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>'
+            : '';
 
           return `
             <tr>
               <td>${position.dnf ? 'DNF' : `P${position.position || '—'}`}</td>
               <td>${this.escapeHtml(driverName)}</td>
               <td>${this.escapeHtml(team ? `${team.name} - ${team.engine || 'N/A'}` : '—')}</td>
-              <td>${this.escapeHtml(position.laptime || '—')}</td>
+              <td><span class="result-laptime">${this.escapeHtml(position.laptime || '—')}${fastestLapIcon}</span></td>
             </tr>
           `;
         }).join('');
@@ -781,8 +781,11 @@ const app = {
         }
       });
 
-      if (result.eventType === 'R' && result.fastestLapDriverId && result.fastestLapAwarded) {
-        const entry = map.get(result.fastestLapDriverId);
+      const fastestLapPosition = result.eventType === 'R' && result.fastestLapAwarded
+        ? this.getFastestLapPosition(result)
+        : null;
+      if (fastestLapPosition && fastestLapPosition.driverId) {
+        const entry = map.get(fastestLapPosition.driverId);
         if (entry) entry.points += 1;
       }
     });
@@ -830,6 +833,36 @@ const app = {
     const season = this.getSeasonData();
     const track = (season.tracks || []).find((entry) => entry.id === trackId);
     return track ? track.name : 'Unknown track';
+  },
+
+  getFastestLapPosition(result) {
+    return (result.positions || []).reduce((fastestPosition, position) => {
+      if (!position.driverId) return fastestPosition;
+      const lapTime = this.parseLapTime(position.laptime);
+      if (lapTime === null) return fastestPosition;
+
+      const fastestLapTime = fastestPosition ? this.parseLapTime(fastestPosition.laptime) : null;
+      return fastestLapTime === null || lapTime < fastestLapTime ? position : fastestPosition;
+    }, null);
+  },
+
+  parseLapTime(laptime) {
+    const value = String(laptime || '').trim();
+    if (!value) return null;
+
+    const minutesAndSeconds = value.match(/^(\d+):([0-5]?\d)(?:\.(\d+))?$/);
+    if (minutesAndSeconds) {
+      const minutes = Number(minutesAndSeconds[1]);
+      const seconds = Number(`${minutesAndSeconds[2]}.${minutesAndSeconds[3] || '0'}`);
+      return minutes * 60 + seconds;
+    }
+
+    if (/^\d+(?:\.\d+)?$/.test(value)) {
+      const seconds = Number(value);
+      return Number.isFinite(seconds) ? seconds : null;
+    }
+
+    return null;
   },
 
   getDriverName(driverId) {
@@ -1248,7 +1281,6 @@ const app = {
     document.getElementById('result-track').value = result.trackId || '';
     document.getElementById('result-date').value = result.date || '';
     document.getElementById('result-event-type').value = result.eventType || 'R';
-    document.getElementById('result-fastest-lap-driver').value = result.fastestLapDriverId || '';
     this.validateResultUniqueness();
     this.renderResultPositions(result);
   },
@@ -1282,14 +1314,9 @@ const app = {
     const positionCount = eventType === 'R' ? 10 : eventType === 'SR' ? 8 : 3;
     const resultData = result || (state.resultEditId ? (season.results || []).find((entry) => entry.id === state.resultEditId) : null);
     const fastestLapContainer = document.getElementById('fastest-lap-container');
-    const fastestLapDriver = document.getElementById('result-fastest-lap-driver');
     const fastestLapToggle = document.getElementById('result-fastest-lap-toggle');
-    fastestLapContainer.classList.toggle('hidden', eventType !== 'R');
-    if (eventType !== 'R') {
-      fastestLapToggle.checked = false;
-      fastestLapDriver.value = '';
-    }
-
+    fastestLapContainer.classList.toggle('hidden', eventType !== 'R' || Boolean(state.resultEditId));
+    if (eventType !== 'R') fastestLapToggle.checked = false;
     const existingPositions = resultData ? resultData.positions || [] : [];
     const resultTrack = document.getElementById('result-track');
     const driverOptions = this.driverOptionsMarkup();
@@ -1326,10 +1353,6 @@ const app = {
         driverSelector.value = existingPosition.driverId || '';
       }
     });
-
-    if (resultData && resultData.fastestLapDriverId) {
-      fastestLapDriver.value = resultData.fastestLapDriverId;
-    }
 
     if (resultTrack.value && !resultData) {
       resultTrack.value = resultTrack.value;
@@ -1379,8 +1402,11 @@ const app = {
       });
     }
 
-    const fastestLapDriverId = eventType === 'R' ? document.getElementById('result-fastest-lap-driver').value || null : null;
-    const fastestLapAwarded = eventType === 'R' && document.getElementById('result-fastest-lap-toggle').checked && Boolean(fastestLapDriverId);
+    const existingResult = (season.results || []).find((entry) => entry.id === state.resultEditId);
+    const fastestLapAwarded = eventType === 'R'
+      && (state.resultEditId
+        ? Boolean(existingResult && existingResult.fastestLapAwarded)
+        : document.getElementById('result-fastest-lap-toggle').checked);
 
     const result = {
       id: state.resultEditId || this.generateId(),
@@ -1388,7 +1414,6 @@ const app = {
       date,
       eventType,
       positions,
-      fastestLapDriverId,
       fastestLapAwarded
     };
 
