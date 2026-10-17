@@ -101,6 +101,14 @@ const app = {
         this.applyLapTimeMask(event.target);
       }
     });
+    ['result-track-filter', 'result-event-type-filter'].forEach((filterId) => {
+      document.getElementById(filterId).addEventListener('change', () => this.renderResults());
+    });
+    document.getElementById('clear-result-filters').addEventListener('click', () => {
+      document.getElementById('result-track-filter').value = '';
+      document.getElementById('result-event-type-filter').value = '';
+      this.renderResults();
+    });
 
     document.getElementById('add-driver-button').addEventListener('click', () => this.resetDriverForm());
     document.getElementById('add-team-button').addEventListener('click', () => this.resetTeamForm());
@@ -568,6 +576,8 @@ const app = {
     const list = document.getElementById('results-list');
     const season = this.getSeasonData();
     const results = season.results || [];
+    const trackFilter = document.getElementById('result-track-filter');
+    const eventTypeFilter = document.getElementById('result-event-type-filter');
     const eventTypeOrder = { Q1: 0, Q2: 1, Q3: 2, SR: 3, R: 4 };
     const eventTypeLabels = {
       Q1: 'Qualifying 1',
@@ -577,12 +587,36 @@ const app = {
       R: 'Race'
     };
 
+    const selectedTrackId = trackFilter.value;
+    const selectedEventType = eventTypeFilter.value;
+    const tracks = [...(season.tracks || [])].sort((firstTrack, secondTrack) =>
+      firstTrack.name.localeCompare(secondTrack.name)
+    );
+    trackFilter.innerHTML = '<option value="">All tracks</option>' + tracks.map((track) =>
+      `<option value="${this.escapeAttribute(track.id)}">${this.escapeHtml(track.name)}</option>`
+    ).join('');
+    if (tracks.some((track) => track.id === selectedTrackId)) trackFilter.value = selectedTrackId;
+
+    eventTypeFilter.innerHTML = '<option value="">All event types</option>' + Object.entries(eventTypeLabels)
+      .map(([eventType, label]) => `<option value="${eventType}">${label}</option>`)
+      .join('');
+    if (eventTypeLabels[selectedEventType]) eventTypeFilter.value = selectedEventType;
+
+    const filteredResults = results.filter((result) =>
+      (!trackFilter.value || result.trackId === trackFilter.value)
+      && (!eventTypeFilter.value || result.eventType === eventTypeFilter.value)
+    );
+
     if (!results.length) {
       list.innerHTML = '<div class="empty-state">No race results entered yet.</div>';
       return;
     }
+    if (!filteredResults.length) {
+      list.innerHTML = '<div class="empty-state">No race results match the selected filters.</div>';
+      return;
+    }
 
-    const sortedResults = [...results].sort((firstResult, secondResult) => {
+    const sortedResults = [...filteredResults].sort((firstResult, secondResult) => {
       const dateOrder = (secondResult.date || '').localeCompare(firstResult.date || '');
       if (dateOrder !== 0) return dateOrder;
       return (eventTypeOrder[firstResult.eventType] ?? Number.MAX_SAFE_INTEGER)

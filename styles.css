@@ -330,6 +330,25 @@ input:focus, select:focus {
   gap: 12px;
 }
 
+.result-filters {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.result-filters label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.result-filters select {
+  min-width: 160px;
+}
+
 .result-card {
   background: var(--panel-alt);
   border: 1px solid var(--border);

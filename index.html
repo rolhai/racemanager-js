@@ -200,6 +200,21 @@
               <h2>Race results</h2>
               <button id="add-result-button" class="primary-button">Add result</button>
             </div>
+            <div class="result-filters" aria-label="Filter race results">
+              <label>
+                Track
+                <select id="result-track-filter">
+                  <option value="">All tracks</option>
+                </select>
+              </label>
+              <label>
+                Event type
+                <select id="result-event-type-filter">
+                  <option value="">All event types</option>
+                </select>
+              </label>
+              <button id="clear-result-filters" class="secondary-button" type="button">Clear filters</button>
+            </div>
             <div id="results-list" class="result-list"></div>
           </div>
 
