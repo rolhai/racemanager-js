@@ -568,13 +568,21 @@ const app = {
     const list = document.getElementById('results-list');
     const season = this.getSeasonData();
     const results = season.results || [];
+    const eventTypeOrder = { Q1: 0, Q2: 1, Q3: 2, SR: 3, R: 4 };
 
     if (!results.length) {
       list.innerHTML = '<div class="empty-state">No race results entered yet.</div>';
       return;
     }
 
-    list.innerHTML = results.map((result) => {
+    const sortedResults = [...results].sort((firstResult, secondResult) => {
+      const dateOrder = (secondResult.date || '').localeCompare(firstResult.date || '');
+      if (dateOrder !== 0) return dateOrder;
+      return (eventTypeOrder[firstResult.eventType] ?? Number.MAX_SAFE_INTEGER)
+        - (eventTypeOrder[secondResult.eventType] ?? Number.MAX_SAFE_INTEGER);
+    });
+
+    list.innerHTML = sortedResults.map((result) => {
       const status = new Date(result.date) > new Date() ? 'Upcoming' : 'Completed';
       const positions = (result.positions || []).map((position) => {
         const dnfTag = position.dnf ? ' DNF' : '';
