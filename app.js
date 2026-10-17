@@ -220,7 +220,11 @@ const app = {
   renderSeasonSelector() {
     const select = document.getElementById('season-select');
     const currentId = state.activeSeasonId;
-    const options = state.seasons.map((season) => `<option value="${season.id}">${this.escapeHtml(season.name || 'Unnamed season')}</option>`);
+    const options = [...state.seasons]
+      .sort((firstSeason, secondSeason) =>
+        (firstSeason.name || 'Unnamed season').localeCompare(secondSeason.name || 'Unnamed season', undefined, { sensitivity: 'base' })
+      )
+      .map((season) => `<option value="${season.id}">${this.escapeHtml(season.name || 'Unnamed season')}</option>`);
     select.innerHTML = '<option value="">Select a season</option>' + options.join('');
     if (currentId && state.seasons.some((season) => season.id === currentId)) {
       select.value = currentId;
@@ -403,21 +407,31 @@ const app = {
 
   countryOptionsMarkup() {
     const season = this.getSeasonData();
-    return this.getCountries(season).map((country) => `
+    return [...this.getCountries(season)]
+      .sort((firstCountry, secondCountry) =>
+        (firstCountry.name || '').localeCompare(secondCountry.name || '', undefined, { sensitivity: 'base' })
+      )
+      .map((country) => `
       <option value="${country.id}">${this.escapeHtml(country.name)}</option>
     `).join('') || '<option value="">No countries added</option>';
   },
 
   teamOptionsMarkup() {
     const season = this.getSeasonData();
-    return (season.teams || []).map((team) => `
+    return [...(season.teams || [])]
+      .sort((firstTeam, secondTeam) =>
+        (firstTeam.name || '').localeCompare(secondTeam.name || '', undefined, { sensitivity: 'base' })
+      )
+      .map((team) => `
       <option value="${team.id}">${this.escapeHtml(team.name)}</option>
     `).join('') || '<option value="">No teams added</option>';
   },
 
   trackOptionsMarkup() {
     const season = this.getSeasonData();
-    const tracks = season.tracks || [];
+    const tracks = [...(season.tracks || [])].sort((firstTrack, secondTrack) =>
+      (firstTrack.name || '').localeCompare(secondTrack.name || '', undefined, { sensitivity: 'base' })
+    );
     if (!tracks.length) return '<option value="">No tracks added</option>';
     return '<option value="">Select a track</option>' + tracks.map((track) => `
       <option value="${track.id}">${this.escapeHtml(track.name)}</option>
@@ -426,7 +440,13 @@ const app = {
 
   driverOptionsMarkup() {
     const season = this.getSeasonData();
-    return (season.drivers || []).map((driver) => `
+    return [...(season.drivers || [])]
+      .sort((firstDriver, secondDriver) => {
+        const firstName = `${firstDriver.firstname || ''} ${firstDriver.lastname || ''}`.trim();
+        const secondName = `${secondDriver.firstname || ''} ${secondDriver.lastname || ''}`.trim();
+        return firstName.localeCompare(secondName, undefined, { sensitivity: 'base' });
+      })
+      .map((driver) => `
       <option value="${driver.id}">${this.escapeHtml(`${driver.firstname} ${driver.lastname}`)}</option>
     `).join('') || '<option value="">No drivers added</option>';
   },
