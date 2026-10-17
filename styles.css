@@ -341,22 +341,13 @@ input:focus, select:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 20px;
 }
 
-.result-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--accent-soft);
-  color: #ffbfbd;
-  border-radius: 999px;
-  font-weight: 800;
-  padding: 5px 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 0.73rem;
+.result-header strong {
+  font-size: 1.05rem;
 }
 
 .result-details {
@@ -364,19 +355,21 @@ input:focus, select:focus {
   font-size: 0.94rem;
 }
 
-.result-positions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
+.result-table-wrapper {
+  overflow-x: auto;
 }
 
-.pos-pill {
-  padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 999px;
-  font-size: 0.8rem;
-  border: 1px solid var(--border);
+.result-table {
+  margin-top: 0;
+}
+
+.result-actions {
+  margin-top: 20px;
+}
+
+.result-header .result-details {
+  margin-left: auto;
+  text-align: right;
 }
 
 .standings-grid {

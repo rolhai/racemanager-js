@@ -583,22 +583,42 @@ const app = {
     });
 
     list.innerHTML = sortedResults.map((result) => {
-      const status = new Date(result.date) > new Date() ? 'Upcoming' : 'Completed';
-      const positions = (result.positions || []).map((position) => {
-        const dnfTag = position.dnf ? ' DNF' : '';
-        const driverName = this.getDriverName(position.driverId);
-        return `<span class="pos-pill">P${position.position || '-'} · ${this.escapeHtml(driverName)}${dnfTag}</span>`;
-      }).join('');
+      const positions = [...(result.positions || [])]
+        .sort((firstPosition, secondPosition) => {
+          if (firstPosition.dnf) return secondPosition.dnf ? 0 : 1;
+          if (secondPosition.dnf) return -1;
+          return Number(firstPosition.position || 0) - Number(secondPosition.position || 0);
+        })
+        .map((position) => {
+          const driver = (season.drivers || []).find((entry) => entry.id === position.driverId);
+          const team = driver && (season.teams || []).find((entry) => entry.id === driver.teamId);
+          const driverName = driver ? `${driver.firstname} ${driver.lastname}` : '—';
+
+          return `
+            <tr>
+              <td>${position.dnf ? 'DNF' : `P${position.position || '—'}`}</td>
+              <td>${this.escapeHtml(driverName)}</td>
+              <td>${this.escapeHtml(team ? `${team.name} - ${team.engine || 'N/A'}` : '—')}</td>
+              <td>${this.escapeHtml(position.laptime || '—')}</td>
+            </tr>
+          `;
+        }).join('');
 
       return `
         <div class="result-card">
           <div class="result-header">
-            <span class="result-badge">${this.escapeHtml(result.eventType)}</span>
-            <span class="result-details">${this.escapeHtml(this.getTrackName(result.trackId))} · ${this.escapeHtml(result.date || 'No date')}</span>
+            <strong>${this.escapeHtml(this.getTrackName(result.trackId))} - ${this.escapeHtml(result.eventType)}</strong>
+            <span class="result-details">${this.escapeHtml(result.date || 'No date')}</span>
           </div>
-          <div class="result-details">${status} · Fastest lap: ${this.escapeHtml(this.getDriverName(result.fastestLapDriverId) || 'N/A')}</div>
-          <div class="result-positions">${positions || '<span class="pos-pill">No positions entered</span>'}</div>
-          <div class="item-actions" style="margin-top: 12px;">
+          <div class="result-table-wrapper">
+            <table class="standings-table result-table">
+              <thead>
+                <tr><th>Position</th><th>Driver</th><th>Team - Engine</th><th>Laptime</th></tr>
+              </thead>
+              <tbody>${positions || '<tr><td colspan="4">No results entered</td></tr>'}</tbody>
+            </table>
+          </div>
+          <div class="item-actions result-actions">
             <button class="secondary-button" type="button" data-result-edit="${result.id}">Edit</button>
             <button class="danger-button" type="button" data-result-delete="${result.id}">Delete</button>
           </div>
