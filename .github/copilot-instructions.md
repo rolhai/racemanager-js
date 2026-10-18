@@ -38,7 +38,6 @@ standings. Data is shared and synced across users via Firebase.
   - event type, track and driver is unique for the sprint race result
   Support:  
   - Sprint points system (8-7-6-5-4-3-2-1 for P1–P8)
-  - DNF handling (driver scores 0, no position)
 - **Race Results**: for each track enter the race results.
   - enter the race date for a race (event type is 'R', best laptime and finishing order (position 1–10) and
     map each position to a driver.
@@ -46,7 +45,6 @@ standings. Data is shared and synced across users via Firebase.
   Support:
   - Standard points system (25-18-15-12-10-8-6-4-2-1 for P1–P10)
   - +1 point for fastest lap (optional toggle)
-  - DNF handling (driver scores 0, no position)
 - **Season view**: list all races in the season with status (upcoming /
   completed).
 - **Championship tables**:
@@ -76,7 +74,7 @@ standings. Data is shared and synced across users via Firebase.
           - drivers: [{ id, firstname, lastname, teamId, nationality }]
           - teams: [{ id, name, licenceCountryId, engine }]
           - tracks: [{ id, name, countryId }]
-          - results: [{ trackId, date, eventType, positions: [{ position, driverId, laptime, dnf }] }]
+          - results: [{ trackId, date, eventType, positions: [{ position, driverId, laptime }] }]
   ```
 - Use `onSnapshot` (real-time listener) on the currently selected season's
   document so all connected users see edits live, without a manual refresh.

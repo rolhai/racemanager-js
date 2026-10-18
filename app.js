@@ -640,8 +640,6 @@ const app = {
       const fastestLapPosition = hasLapTimes ? this.getFastestLapPosition(result) : null;
       const positions = [...(result.positions || [])]
         .sort((firstPosition, secondPosition) => {
-          if (firstPosition.dnf) return secondPosition.dnf ? 0 : 1;
-          if (secondPosition.dnf) return -1;
           return Number(firstPosition.position || 0) - Number(secondPosition.position || 0);
         })
         .map((position) => {
@@ -654,7 +652,7 @@ const app = {
 
           return `
             <tr>
-              <td>${position.dnf ? 'DNF' : `P${position.position || '—'}`}</td>
+              <td>P${position.position || '—'}</td>
               <td>${this.escapeHtml(driverName)}</td>
               <td>${this.escapeHtml(team ? `${team.name} - ${team.engine || 'N/A'}` : '—')}</td>
               <td><span class="result-laptime">${this.escapeHtml(position.laptime || '—')}${fastestLapIcon}</span></td>
@@ -821,7 +819,7 @@ const app = {
         : { 1: 8, 2: 7, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1 };
 
       (result.positions || []).forEach((position) => {
-        if (!position || !position.driverId || position.dnf) return;
+        if (!position || !position.driverId) return;
         const entry = map.get(position.driverId);
         if (!entry) return;
         const positionValue = Number(position.position);
@@ -1398,7 +1396,6 @@ const app = {
       const existingPosition = existingPositions.find((entry) => Number(entry.position) === positionNumber) || {};
       const driverValue = existingPosition.driverId || '';
       const lapValue = existingPosition.laptime || '';
-      const dnfChecked = existingPosition.dnf ? 'checked' : '';
 
       return `
         <div class="position-card">
@@ -1411,7 +1408,6 @@ const app = {
             <label>Laptime</label>
             <input id="pos-lap-${positionNumber}" type="text" inputmode="numeric" maxlength="8" pattern="\\d:[0-5]\\d\\.\\d{3}" title="Enter a lap time as m:ss.mmm, for example 1:36.123" data-laptime-mask value="${this.escapeAttribute(lapValue)}" placeholder="1:36.123" />
           </div>
-          <label><input id="pos-dnf-${positionNumber}" type="checkbox" ${dnfChecked} /> DNF</label>
         </div>
       `;
     }).join('');
@@ -1461,17 +1457,14 @@ const app = {
     for (let positionNumber = 1; positionNumber <= positionCount; positionNumber += 1) {
       const driverSelector = document.getElementById(`pos-driver-${positionNumber}`);
       const lapInput = document.getElementById(`pos-lap-${positionNumber}`);
-      const dnfInput = document.getElementById(`pos-dnf-${positionNumber}`);
       const driverId = driverSelector ? driverSelector.value : '';
       const laptime = lapInput ? lapInput.value.trim() : '';
-      const dnf = dnfInput ? dnfInput.checked : false;
 
-      if (!driverId && !dnf) continue;
+      if (!driverId) continue;
       positions.push({
-        position: dnf ? null : positionNumber,
+        position: positionNumber,
         driverId,
-        laptime,
-        dnf
+        laptime
       });
     }
 
