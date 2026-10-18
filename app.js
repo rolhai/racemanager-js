@@ -61,6 +61,7 @@ const app = {
     document.getElementById('forgot-password-button').addEventListener('click', this.forgotPassword.bind(this));
     document.getElementById('save-season-button').addEventListener('click', this.handleSeasonSave.bind(this));
     document.getElementById('create-season-button').addEventListener('click', () => this.prepareNewSeason());
+    document.getElementById('copy-season-button').addEventListener('click', this.copySelectedSeason.bind(this));
     document.getElementById('rename-season-button').addEventListener('click', () => this.prepareRenameSeason());
     document.getElementById('delete-season-button').addEventListener('click', this.deleteSelectedSeason.bind(this));
     document.getElementById('export-season-button').addEventListener('click', this.exportSeason.bind(this));
@@ -324,6 +325,21 @@ const app = {
       this.showMessage('Season created successfully.');
       this.selectSeason(ref.id);
     }
+  },
+
+  async copySelectedSeason() {
+    if (!this.ensureUserSignedIn()) return;
+    if (!state.activeSeason || !state.activeSeasonId) {
+      this.showMessage('Select a season to copy.', true);
+      return;
+    }
+
+    const copiedSeason = JSON.parse(JSON.stringify(state.activeSeason));
+    delete copiedSeason.id;
+    copiedSeason.name = `${state.activeSeason.name || 'Unnamed season'} - copy`;
+
+    await firebase.firestore().collection('seasons').add(copiedSeason);
+    this.showMessage('Season copied successfully.');
   },
 
   async deleteSelectedSeason() {
