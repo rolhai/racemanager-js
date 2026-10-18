@@ -1452,7 +1452,7 @@ const app = {
         <h4>Position ${positionNumber}</h4>
         <div class="field-group">
           <label>Driver</label>
-          <select id="pos-driver-${positionNumber}">${driverOptions.replace('<option value="">No drivers added</option>', '<option value="">Select a driver</option>')}</select>
+          <select id="pos-driver-${positionNumber}"><option value=""></option>${driverOptions}</select>
         </div>
         <div class="field-group">
           <label>Laptime</label>
