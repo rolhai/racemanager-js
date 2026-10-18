@@ -101,6 +101,9 @@ const app = {
         this.applyLapTimeMask(event.target);
       }
     });
+    document.getElementById('result-add-position-button').addEventListener('click', () => {
+      this.addResultPosition();
+    });
     ['result-track-filter', 'result-event-type-filter'].forEach((filterId) => {
       document.getElementById(filterId).addEventListener('change', () => this.renderResults());
     });
@@ -1381,35 +1384,29 @@ const app = {
   renderResultPositions(result = null) {
     const eventType = document.getElementById('result-event-type').value || 'R';
     const season = this.getSeasonData();
-    const positionCount = eventType === 'R' ? 10 : eventType === 'SR' ? 8 : 3;
     const resultData = result || (state.resultEditId ? (season.results || []).find((entry) => entry.id === state.resultEditId) : null);
     const fastestLapContainer = document.getElementById('fastest-lap-container');
     const fastestLapToggle = document.getElementById('result-fastest-lap-toggle');
     fastestLapContainer.classList.toggle('hidden', eventType !== 'R' || Boolean(state.resultEditId));
     if (eventType !== 'R') fastestLapToggle.checked = false;
     const existingPositions = resultData ? resultData.positions || [] : [];
-    const resultTrack = document.getElementById('result-track');
     const driverOptions = this.driverOptionsMarkup();
+    const standardPositionCount = eventType === 'R' ? 10 : eventType === 'SR' ? 8 : 3;
+    const highestExistingPosition = existingPositions.reduce(
+      (highest, position) => Math.max(highest, Number(position.position) || 0),
+      standardPositionCount
+    );
+    const positionCount = Math.max(standardPositionCount, highestExistingPosition);
+    const addPositionButton = document.getElementById('result-add-position-button');
+    addPositionButton.classList.toggle(
+      'hidden',
+      !state.resultEditId || !['Q1', 'Q2', 'Q3'].includes(eventType)
+    );
 
     const cards = Array.from({ length: positionCount }, (_, index) => {
       const positionNumber = index + 1;
       const existingPosition = existingPositions.find((entry) => Number(entry.position) === positionNumber) || {};
-      const driverValue = existingPosition.driverId || '';
-      const lapValue = existingPosition.laptime || '';
-
-      return `
-        <div class="position-card">
-          <h4>Position ${positionNumber}</h4>
-          <div class="field-group">
-            <label>Driver</label>
-            <select id="pos-driver-${positionNumber}">${driverOptions.replace('<option value="">No drivers added</option>', '<option value="">Select a driver</option>')}</select>
-          </div>
-          <div class="field-group">
-            <label>Laptime</label>
-            <input id="pos-lap-${positionNumber}" type="text" inputmode="numeric" maxlength="8" pattern="\\d:[0-5]\\d\\.\\d{3}" title="Enter a lap time as m:ss.mmm, for example 1:36.123" data-laptime-mask value="${this.escapeAttribute(lapValue)}" placeholder="1:36.123" />
-          </div>
-        </div>
-      `;
+      return this.resultPositionCardMarkup(positionNumber, existingPosition, driverOptions);
     }).join('');
 
     document.getElementById('result-positions').innerHTML = cards;
@@ -1422,10 +1419,39 @@ const app = {
         driverSelector.value = existingPosition.driverId || '';
       }
     });
+  },
 
-    if (resultTrack.value && !resultData) {
-      resultTrack.value = resultTrack.value;
-    }
+  resultPositionCardMarkup(positionNumber, existingPosition, driverOptions) {
+    return `
+      <div class="position-card" data-position="${positionNumber}">
+        <h4>Position ${positionNumber}</h4>
+        <div class="field-group">
+          <label>Driver</label>
+          <select id="pos-driver-${positionNumber}">${driverOptions.replace('<option value="">No drivers added</option>', '<option value="">Select a driver</option>')}</select>
+        </div>
+        <div class="field-group">
+          <label>Laptime</label>
+          <input id="pos-lap-${positionNumber}" type="text" inputmode="numeric" maxlength="8" pattern="\\d:[0-5]\\d\\.\\d{3}" title="Enter a lap time as m:ss.mmm, for example 1:36.123" data-laptime-mask value="${this.escapeAttribute(existingPosition.laptime || '')}" placeholder="1:36.123" />
+        </div>
+      </div>
+    `;
+  },
+
+  addResultPosition() {
+    const eventType = document.getElementById('result-event-type').value;
+    if (!state.resultEditId || !['Q1', 'Q2', 'Q3'].includes(eventType)) return;
+
+    const positionsContainer = document.getElementById('result-positions');
+    const currentPositions = positionsContainer.querySelectorAll('.position-card');
+    const nextPosition = Array.from(currentPositions).reduce(
+      (highest, card) => Math.max(highest, Number(card.dataset.position) || 0),
+      0
+    ) + 1;
+    positionsContainer.insertAdjacentHTML(
+      'beforeend',
+      this.resultPositionCardMarkup(nextPosition, {}, this.driverOptionsMarkup())
+    );
+    this.applyLapTimeMask(document.getElementById(`pos-lap-${nextPosition}`));
   },
 
   async saveResult() {
@@ -1452,7 +1478,9 @@ const app = {
     }
 
     const positions = [];
-    const positionCount = eventType === 'R' ? 10 : eventType === 'SR' ? 8 : 3;
+    const standardPositionCount = eventType === 'R' ? 10 : eventType === 'SR' ? 8 : 3;
+    const positionCount = Array.from(document.querySelectorAll('#result-positions .position-card'))
+      .reduce((highest, card) => Math.max(highest, Number(card.dataset.position) || 0), standardPositionCount);
 
     for (let positionNumber = 1; positionNumber <= positionCount; positionNumber += 1) {
       const driverSelector = document.getElementById(`pos-driver-${positionNumber}`);
