@@ -432,7 +432,7 @@ const app = {
     `).join('') || '<option value="">No teams added</option>';
   },
 
-  trackOptionsMarkup() {
+  trackOptionsMarkup(allTracksLabel = null) {
     const season = this.getSeasonData();
     const tracks = [...(season.tracks || [])].sort((firstTrack, secondTrack) =>
       this.getCountryName(firstTrack.countryId).localeCompare(
@@ -441,8 +441,9 @@ const app = {
         { sensitivity: 'base' }
       ) || (firstTrack.name || '').localeCompare(secondTrack.name || '', undefined, { sensitivity: 'base' })
     );
-    if (!tracks.length) return '<option value="">No tracks added</option>';
-    return '<option value="">Select a track</option>' + tracks.map((track) => `
+    const placeholder = allTracksLabel || 'Select a track';
+    if (!tracks.length) return `<option value="">${allTracksLabel || 'No tracks added'}</option>`;
+    return `<option value="">${placeholder}</option>` + tracks.map((track) => `
       <option value="${track.id}">${this.escapeHtml(this.getCountryName(track.countryId))} - ${this.escapeHtml(track.name)}</option>
     `).join('');
   },
@@ -604,12 +605,8 @@ const app = {
 
     const selectedTrackId = trackFilter.value;
     const selectedEventType = eventTypeFilter.value;
-    const tracks = [...(season.tracks || [])].sort((firstTrack, secondTrack) =>
-      (firstTrack.name || '').localeCompare(secondTrack.name || '', undefined, { sensitivity: 'base' })
-    );
-    trackFilter.innerHTML = '<option value="">All tracks</option>' + tracks.map((track) =>
-      `<option value="${this.escapeAttribute(track.id)}">${this.escapeHtml(track.name)}</option>`
-    ).join('');
+    const tracks = season.tracks || [];
+    trackFilter.innerHTML = this.trackOptionsMarkup('All tracks');
     if (tracks.some((track) => track.id === selectedTrackId)) trackFilter.value = selectedTrackId;
 
     eventTypeFilter.innerHTML = '<option value="">All event types</option>' + Object.entries(eventTypeLabels)
