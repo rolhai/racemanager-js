@@ -13,6 +13,14 @@ const state = {
   resultEditId: null
 };
 
+const eventTypeLabels = {
+  Q1: 'Qualifying 1',
+  Q2: 'Qualifying 2',
+  Q3: 'Qualifying 3',
+  SR: 'Sprint Race',
+  R: 'Race'
+};
+
 const app = {
   init() {
     this.bindStaticEvents();
@@ -403,6 +411,11 @@ const app = {
       if (result) resultTrack.value = result.trackId || '';
     }
 
+    const resultEventType = document.getElementById('result-event-type');
+    const selectedEventType = resultEventType.value;
+    resultEventType.innerHTML = this.eventTypeOptionsMarkup();
+    if (eventTypeLabels[selectedEventType]) resultEventType.value = selectedEventType;
+
     const fastestLapToggle = document.getElementById('result-fastest-lap-toggle');
     if (state.resultEditId) {
       const result = season.results.find((entry) => entry.id === state.resultEditId);
@@ -446,6 +459,14 @@ const app = {
     return `<option value="">${placeholder}</option>` + tracks.map((track) => `
       <option value="${track.id}">${this.escapeHtml(this.getCountryName(track.countryId))} - ${this.escapeHtml(track.name)}</option>
     `).join('');
+  },
+
+  eventTypeOptionsMarkup(includeAllTypes = false) {
+    const allTypesOption = includeAllTypes ? '<option value="">All event types</option>' : '';
+    const eventTypeOptions = Object.entries(eventTypeLabels).map(([eventType, label]) => `
+      <option value="${eventType}">${this.escapeHtml(eventType)} - ${this.escapeHtml(label)}</option>
+    `).join('');
+    return allTypesOption + eventTypeOptions;
   },
 
   driverOptionsMarkup() {
@@ -595,13 +616,6 @@ const app = {
     const trackFilter = document.getElementById('result-track-filter');
     const eventTypeFilter = document.getElementById('result-event-type-filter');
     const eventTypeOrder = { Q1: 0, Q2: 1, Q3: 2, SR: 3, R: 4 };
-    const eventTypeLabels = {
-      Q1: 'Qualifying 1',
-      Q2: 'Qualifying 2',
-      Q3: 'Qualifying 3',
-      SR: 'Sprint Race',
-      R: 'Race'
-    };
 
     const selectedTrackId = trackFilter.value;
     const selectedEventType = eventTypeFilter.value;
@@ -609,9 +623,7 @@ const app = {
     trackFilter.innerHTML = this.trackOptionsMarkup('All tracks');
     if (tracks.some((track) => track.id === selectedTrackId)) trackFilter.value = selectedTrackId;
 
-    eventTypeFilter.innerHTML = '<option value="">All event types</option>' + Object.entries(eventTypeLabels)
-      .map(([eventType, label]) => `<option value="${eventType}">${label}</option>`)
-      .join('');
+    eventTypeFilter.innerHTML = this.eventTypeOptionsMarkup(true);
     if (eventTypeLabels[selectedEventType]) eventTypeFilter.value = selectedEventType;
 
     const filteredResults = results.filter((result) =>
