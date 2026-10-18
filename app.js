@@ -1425,7 +1425,7 @@ const app = {
     const addPositionButton = document.getElementById('result-add-position-button');
     addPositionButton.classList.toggle(
       'hidden',
-      !state.resultEditId || !['Q1', 'Q2', 'Q3'].includes(eventType)
+      !state.resultEditId || !['Q1', 'Q2', 'Q3', 'SR', 'R'].includes(eventType)
     );
 
     const cards = Array.from({ length: positionCount }, (_, index) => {
@@ -1464,7 +1464,7 @@ const app = {
 
   addResultPosition() {
     const eventType = document.getElementById('result-event-type').value;
-    if (!state.resultEditId || !['Q1', 'Q2', 'Q3'].includes(eventType)) return;
+    if (!state.resultEditId || !['Q1', 'Q2', 'Q3', 'SR', 'R'].includes(eventType)) return;
 
     const positionsContainer = document.getElementById('result-positions');
     const currentPositions = positionsContainer.querySelectorAll('.position-card');
