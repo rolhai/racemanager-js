@@ -1,140 +1,105 @@
 # Copilot Instructions — Race Manager
 
 ## Project
-"Race Manager" is a web app for tracking one or more Formula 1 seasons:
-drivers, teams, tracks, and events, with live-calculated championship
-standings. Data is shared and synced across users via Firebase.
 
-## Functionality
-- **User accounts**: log in with email + password (Firebase Authentication).
-  Only logged-in users can view/add/edit/delete anything.
-  - **No public sign-up form in the app.** The app owner (you) creates each
-    user manually in the Firebase console (Authentication > Users > Add
-    user) and shares the email/password with that person directly. This
-    keeps write access limited to people you've explicitly approved.
-  - Log in / log out
-  - Password reset ("forgot password" email link), so users can change
-    their own password after you've created their account
-  - A visible auth state indicator (e.g. "Logged in as name@example.com" /
-    "Log in to edit") in the header
-- **Seasons**: create, rename, delete, and switch between multiple F1
-  seasons (e.g. "2025 Season", "2026 Season"). Each season has its own
-  independent set of drivers, teams, tracks, countries, qualifying results and race results. A season selector
-  (dropdown or list) is visible at all times so the user knows which season
-  they're editing. a season has the following additional data: unique name, year, simulation name.
-  a click on new season clears the active season and updates the selected season to the new one.
-- **Countries**: add/edit/delete a country (name, code with 3 characters).
-- **Drivers**: add/edit/delete a driver (first name, last name, country of nationality, team assignment). 
-- **Teams**: add/edit/delete a team (name, licence country, engine supplier).
-- **Tracks**: add/edit/delete a track (name, country).
-- **Qualifying Results**: for each track enter the qualifying results.
-  - the qualifying results have three sections for each event type one
-  - each section has the finishing order (position 1–3) and map each position to a driver.
-  - select event type ('Q3' or 'Q2' or 'Q1'), select track, select driver, select position and enter the laptime.
-  - event type, track and driver is unique for the qualifying result
-- **Sprint Race Results**: for each track enter the sprint race results. 
-  - enter the race date for a sprint race (event type is 'SR') and the finishing order (position 1–8) and 
-    map each position to a driver.
-  - event type, track and driver is unique for the sprint race result
-  Support:  
-  - Sprint points system (8-7-6-5-4-3-2-1 for P1–P8)
-  - DNF handling (driver scores 0, no position)
-- **Race Results**: for each track enter the race results.
-  - enter the race date for a race (event type is 'R', best laptime and finishing order (position 1–10) and
-    map each position to a driver.
-  - event type, track and driver is unique for the race result
-  Support:
-  - Standard points system (25-18-15-12-10-8-6-4-2-1 for P1–P10)
-  - +1 point for fastest lap (optional toggle)
-  - DNF handling (driver scores 0, no position)
-- **Season view**: list all races in the season with status (upcoming /
-  completed).
-- **Championship tables**:
-  - Drivers' Championship: driver, team, total points, wins, podiums — sorted
-    by points descending.
-  - Constructors' Championship: team, total points (sum of both drivers) —
-    sorted by points descending.
-  - Tables update automatically as race results are entered.
+Race Manager is a static, browser-based app for managing Formula 1 seasons,
+their countries, drivers, teams, tracks, qualifying and race results, and
+championship standings. Season data is stored in Firebase Firestore.
 
-## Data & storage — Firebase
-- Backend is **Firebase Firestore**, so multiple friends can view and edit
-  the same season(s) and stay in sync in real time (no manual file sharing).
-- Include the Firebase SDK via `<script>` tags (no build step / bundler).
-  Keep the Firebase config object (apiKey, projectId, etc.) in a separate
-  `firebase-config.js` file so it's easy to swap per deployment; note in
-  comments that this key is safe to expose publicly and that access is
-  controlled by Firestore security rules, not by hiding the key.
-- **Data model** — one Firestore collection `seasons`, one document per
-  season, each holding its own nested data:
+## Current functionality
+
+- **Authentication**: Firebase email/password login, logout, and password
+  reset. There is no public sign-up form; accounts are created by the owner
+  in Firebase Authentication. The header shows the current auth state.
+- **Season management**: create, rename, delete, and select seasons. A season
+  has a name, numeric year, simulation name, and its own countries, drivers,
+  teams, tracks, and results. Name, year, and simulation name are required.
+  Creating a season clears the active season until it is saved; saving selects
+  the newly created season.
+- **Countries**: create, edit, and delete countries with a name and a unique
+  three-character iso code.
+- **Drivers**: create, edit, and delete drivers with first name, last name,
+  nationality country, and team assignment.
+- **Teams**: create, edit, and delete teams with a name, licence country, and
+  engine supplier.
+- **Tracks**: create, edit, and delete tracks with a name and country.
+- **Event results**: create, edit, and delete one result per track and event
+  type. Supported event types are Q1, Q2, Q3, sprint (SR), and race (R). Every
+  result requires a track and date. Qualifying has positions 1–3, sprint has
+  positions 1–8, and race has positions 1–10. Each position can store a
+  driver, laptime.
+- **Results list**: lists entered results and labels each as upcoming or
+  completed based on whether its date is in the future. This is not a separate
+  calendar of unentered races.
+- **Standings**: standings recalculate from the active season's results.
+  Race points are 25-18-15-12-10-8-6-4-2-1 for positions 1–10; sprint points
+  are 8-7-6-5-4-3-2-1 for positions 1–8. DNFs score zero. Qualifying does not score championship points.
+  Driver standings include points, wins, and podiums and are ordered by points,
+  then wins, then podiums. Constructor points sum the points of drivers
+  assigned to each team.
+- **JSON backup/restore**: export the selected season or import a JSON file.
+  Import creates a new season unless a season is selected and the user
+  confirms overwriting it. The imported Firestore document ID is not reused
+  when creating a new season.
+
+## Data and Firebase
+
+- Use the Firebase JavaScript SDK through CDN script tags in `index.html`;
+  there is no build step or framework.
+- Firebase settings live in `firebase-config.js`. Its client config is safe to
+  expose; Firestore security rules, not secrecy of the client key, control
+  access.
+- The Firestore model is one `seasons` collection with one document per
+  season. The document stores nested arrays:
+  ```text
+  seasons/{seasonId}
+    name: string
+    year: number
+    simulationName: string
+    countries: [{ id, name, code }]
+    drivers: [{ id, firstname, lastname, nationality, teamId }]
+    teams: [{ id, name, licenceCountryId, engine }]
+    tracks: [{ id, name, countryId }]
+    results: [{
+      id, trackId, date, eventType,
+      positions: [{ position, driverId, laptime }]
+    }]
   ```
-  seasons (collection)
-    └── {seasonId} (document)
-          - name: string
-          - year: number
-          - simulationName: string
-          . countries: [{ id, name, code }]
-          - drivers: [{ id, firstname, lastname, teamId, nationality }]
-          - teams: [{ id, name, licenceCountryId, engine }]
-          - tracks: [{ id, name, countryId }]
-          - results: [{ trackId, date, eventType, positions: [{ position, driverId, laptime, dnf }] }]
-  ```
-- Use `onSnapshot` (real-time listener) on the currently selected season's
-  document so all connected users see edits live, without a manual refresh.
-- **Authentication**: use **Firebase Authentication** with the email/password
-  provider. Every read and write operation (read/create/update/delete on any season,
-  driver, team, track, country or event) must check `firebase.auth().currentUser`
-  is not null before calling Firestore; reads are not open to everyone
-  (only logged in).
-- **Security rules** (Firestore rules, not just client-side checks — the
-  client check is just for UX, the real gate is server-side):
-  ```
+- After authentication, the app listens to the seasons collection and to the
+  selected season document with `onSnapshot`. It unsubscribes from the prior
+  selected-season listener when switching seasons.
+- Signed-out users do not load or see season data. Data-edit form fields are
+  disabled, while some add/edit/delete controls remain visible; write handlers
+  check authentication and prompt the user to log in. Firestore rules remain
+  the authoritative access control.
+- Enable Email/Password in Firebase Authentication and publish rules that
+  require authentication for both reads and writes:
+  ```firestore
   match /seasons/{seasonId} {
-    allow read: if true;
-    allow write: if request.auth != null;
+    allow read, write: if request.auth != null;
   }
   ```
-- Note as a setup step for the user: enable the Email/Password provider in
-  the Firebase console (Authentication > Sign-in method) and publish the
-  rule above in Firestore > Rules.
-- **JSON import/export stays available per season** (independent of
-  Firebase sync):
-  - **Export**: download the currently selected season's document as a
-    `.json` file (same shape as the Firestore document above).
-  - **Import**: upload a `.json` file to create a *new* season document (or
-    overwrite the currently selected one, with a confirmation prompt) —
-    useful for backups, sharing a season outside Firebase, or seeding a
-    fresh Firebase project with existing data.
-  - Both actions are per-season, never "all seasons at once."
+- Every season's entities and events are edited by updating that season
+  document's arrays. Keep mutations scoped to the active season using the
+  existing `state.activeSeasonId` and `updateSeasonDocument` helper.
 
-## Look & feel
-- Motorsport-inspired dark theme: dark background, high-contrast text,
-  accent color in F1 red or a team color.
-- Card-based layout for drivers/teams/tracks lists.
-- Championship tables styled like real F1 standings tables (position, name,
-  team, points columns; leader row highlighted).
-- Responsive: usable on both desktop and mobile.
-- Clear navigation between sections: Drivers | Teams | Tracks | Race Results
-  | Standings.
-- Login as a simple modal or dedicated view (email + password + "forgot
-  password" link only — no sign-up form). Edit controls (add/edit/delete
-  buttons, forms) are hidden or disabled when logged out, so logged-out
-  visitors get a clean read-only view rather than disabled-looking buttons
-  everywhere.
+## Look and feel
 
-## Tech constraints
-- Vanilla HTML/CSS/JS only — no frameworks, no build step (Firebase SDK via
-  CDN `<script>` tags, including the Auth module, is the one exception).
-- Static files only (`index.html` + linked HTML/CSS/JS in the same folder) so it
-  deploys directly to GitHub Pages with zero configuration; Firebase is the
-  only external dependency and runs entirely client-side.
-- Keep code in small, readable functions; comment non-obvious logic
-  (especially points calculation and Firestore listeners).
+- Use the existing motorsport-inspired dark theme, red accent, cards, and
+  responsive layout.
+- Keep the season selector and auth state in the header area, and use the
+  existing section navigation: Drivers, Teams, Tracks, Countries, Race
+  Results, and Standings.
+- Use semantic forms and tables, and preserve the existing login modal and
+  feedback banner patterns.
 
 ## Coding conventions
-- Use `const`/`let`, no `var`.
-- Use descriptive function and variable names (`calculateDriverStandings`,
-  not `calcDS`).
-- Keep HTML semantic (`<table>` for standings, `<form>` for data entry).
-- All read/write functions should take the active `seasonId` explicitly
-  (no hidden global season state) so season-switching logic stays simple
-  and bug-free.
+
+- Use vanilla HTML, CSS, and JavaScript; use `const` and `let`, never `var`.
+- Keep functions small and names descriptive.
+- Preserve the nested per-season Firestore model and existing active-season
+  state flow. Check authentication before writes and rely on Firestore rules
+  for server-side enforcement.
+- Escape user-provided values before inserting them into HTML.
+- Keep comments for non-obvious logic, especially points calculations and
+  Firestore listeners.
