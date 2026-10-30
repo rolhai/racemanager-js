@@ -34,9 +34,11 @@ championship standings. Season data is stored in Firebase Firestore.
 - **Standings**: standings recalculate from the active season's results.
   Race points are 25-18-15-12-10-8-6-4-2-1 for positions 1–10; sprint points
   are 8-7-6-5-4-3-2-1 for positions 1–8. DNFs score zero. Qualifying does not score championship points.
-  Driver standings include points, wins, and podiums and are ordered by points,
-  then wins, then podiums. Constructor points sum the points of drivers
-  assigned to each team.
+  Driver standings include points, race wins, sprint wins, and podiums. Race
+  wins count only first-place finishes in R events; sprint wins count only
+  first-place finishes in SR events. Standings are ordered by points, then
+  race wins, sprint wins, and podiums. Constructor points sum the points of
+  drivers assigned to each team.
 - **JSON backup/restore**: export the selected season or import a JSON file.
   Import creates a new season unless a season is selected and the user
   confirms overwriting it. The imported Firestore document ID is not reused

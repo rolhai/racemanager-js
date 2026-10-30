@@ -810,7 +810,8 @@ const app = {
         <td>${this.escapeHtml(entry.driverName)}</td>
         <td>${this.escapeHtml(entry.teamName)}</td>
         <td>${entry.points}</td>
-        <td>${entry.wins}</td>
+        <td>${entry.raceWins}</td>
+        <td>${entry.sprintWins}</td>
         <td>${entry.podiums}</td>
       </tr>
     `).join('');
@@ -834,7 +835,8 @@ const app = {
         driverName: `${driver.firstname} ${driver.lastname}`,
         teamName: this.getTeamName(driver.teamId),
         points: 0,
-        wins: 0,
+        raceWins: 0,
+        sprintWins: 0,
         podiums: 0
       });
     });
@@ -853,7 +855,10 @@ const app = {
         const positionValue = Number(position.position);
         if (Number.isFinite(positionValue) && positionValue > 0) {
           entry.points += pointsMap[positionValue] || 0;
-          if (positionValue === 1) entry.wins += 1;
+          if (positionValue === 1) {
+            if (result.eventType === 'R') entry.raceWins += 1;
+            if (result.eventType === 'SR') entry.sprintWins += 1;
+          }
           if (positionValue <= 3) entry.podiums += 1;
         }
       });
@@ -869,7 +874,8 @@ const app = {
 
     return Array.from(map.values()).sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
-      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.raceWins !== a.raceWins) return b.raceWins - a.raceWins;
+      if (b.sprintWins !== a.sprintWins) return b.sprintWins - a.sprintWins;
       return b.podiums - a.podiums;
     });
   },
