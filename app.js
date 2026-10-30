@@ -695,7 +695,7 @@ const app = {
         <div class="result-card">
           <div class="result-header">
             <strong>${this.escapeHtml(this.getTrackName(result.trackId))} - ${this.escapeHtml(eventTypeLabels[result.eventType] || result.eventType)}${wetConditionsIcon}</strong>
-            <span class="result-details">${this.escapeHtml(result.date || 'No date')}</span>
+            <span class="result-details">${this.escapeHtml(this.formatResultDate(result.date))}</span>
           </div>
           <div class="result-table-wrapper">
             <table class="standings-table result-table">
@@ -719,6 +719,12 @@ const app = {
     list.querySelectorAll('[data-result-delete]').forEach((button) => {
       button.addEventListener('click', () => this.deleteResult(button.dataset.resultDelete));
     });
+  },
+
+  formatResultDate(date) {
+    if (!date) return 'No date';
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+    return match ? `${match[3]}.${match[2]}.${match[1]}` : date;
   },
 
   renderOverview() {
