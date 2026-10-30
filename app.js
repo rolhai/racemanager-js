@@ -813,6 +813,8 @@ const app = {
         <td>${entry.raceWins}</td>
         <td>${entry.sprintWins}</td>
         <td>${entry.podiums}</td>
+        <td>${entry.fastestLaps}</td>
+        <td>${entry.polePositions}</td>
       </tr>
     `).join('');
 
@@ -837,38 +839,49 @@ const app = {
         points: 0,
         raceWins: 0,
         sprintWins: 0,
-        podiums: 0
+        podiums: 0,
+        fastestLaps: 0,
+        polePositions: 0
       });
     });
 
     (season.results || []).forEach((result) => {
-      if (result.eventType !== 'R' && result.eventType !== 'SR') return;
+      if (result.eventType === 'R' || result.eventType === 'SR') {
+        const pointsMap = result.eventType === 'R'
+          ? { 1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1 }
+          : { 1: 8, 2: 7, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1 };
 
-      const pointsMap = result.eventType === 'R'
-        ? { 1: 25, 2: 18, 3: 15, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1 }
-        : { 1: 8, 2: 7, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1 };
-
-      (result.positions || []).forEach((position) => {
-        if (!position || !position.driverId) return;
-        const entry = map.get(position.driverId);
-        if (!entry) return;
-        const positionValue = Number(position.position);
-        if (Number.isFinite(positionValue) && positionValue > 0) {
-          entry.points += pointsMap[positionValue] || 0;
-          if (positionValue === 1) {
-            if (result.eventType === 'R') entry.raceWins += 1;
-            if (result.eventType === 'SR') entry.sprintWins += 1;
+        (result.positions || []).forEach((position) => {
+          if (!position || !position.driverId) return;
+          const entry = map.get(position.driverId);
+          if (!entry) return;
+          const positionValue = Number(position.position);
+          if (Number.isFinite(positionValue) && positionValue > 0) {
+            entry.points += pointsMap[positionValue] || 0;
+            if (positionValue === 1) {
+              if (result.eventType === 'R') entry.raceWins += 1;
+              if (result.eventType === 'SR') entry.sprintWins += 1;
+            }
+            if (positionValue <= 3) entry.podiums += 1;
           }
-          if (positionValue <= 3) entry.podiums += 1;
-        }
-      });
+        });
 
-      const fastestLapPosition = result.eventType === 'R' && result.fastestLapAwarded
-        ? this.getFastestLapPosition(result)
-        : null;
-      if (fastestLapPosition && fastestLapPosition.driverId) {
-        const entry = map.get(fastestLapPosition.driverId);
-        if (entry) entry.points += 1;
+        const fastestLapPosition = result.eventType === 'R' && result.fastestLapAwarded
+          ? this.getFastestLapPosition(result)
+          : null;
+        if (fastestLapPosition && fastestLapPosition.driverId) {
+          const entry = map.get(fastestLapPosition.driverId);
+          if (entry) entry.points += 1;
+        }
+      }
+
+      if (result.eventType === 'R' || result.eventType === 'Q3') {
+        const fastestPosition = this.getFastestLapPosition(result);
+        const entry = fastestPosition && map.get(fastestPosition.driverId);
+        if (entry) {
+          if (result.eventType === 'R') entry.fastestLaps += 1;
+          if (result.eventType === 'Q3') entry.polePositions += 1;
+        }
       }
     });
 
