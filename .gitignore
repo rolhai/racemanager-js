@@ -20,3 +20,5 @@ Gemfile.lock
 /server.log
 
 /.idea/
+
+firebase-config.js
