@@ -25,6 +25,7 @@
           <label for="season-select">Season</label>
           <select id="season-select"></select>
           <button id="create-season-button" class="secondary-button" data-editable="true">New season</button>
+          <button id="copy-season-button" class="secondary-button" data-editable="true">Copy</button>
           <button id="rename-season-button" class="secondary-button" data-editable="true">Edit</button>
           <button id="delete-season-button" class="danger-button" data-editable="true">Delete</button>
           <button id="export-season-button" class="secondary-button" type="button">Export JSON</button>
@@ -200,6 +201,21 @@
               <h2>Race results</h2>
               <button id="add-result-button" class="primary-button">Add result</button>
             </div>
+            <div class="result-filters" aria-label="Filter race results">
+              <label>
+                Track
+                <select id="result-track-filter">
+                  <option value="">All tracks</option>
+                </select>
+              </label>
+              <label>
+                Event type
+                <select id="result-event-type-filter">
+                  <option value="">All event types</option>
+                </select>
+              </label>
+              <button id="clear-result-filters" class="secondary-button" type="button">Clear filters</button>
+            </div>
             <div id="results-list" class="result-list"></div>
           </div>
 
@@ -218,23 +234,16 @@
               </div>
               <div class="field-group">
                 <label for="result-event-type">Event type</label>
-                <select id="result-event-type">
-                  <option value="Q1">Q1</option>
-                  <option value="Q2">Q2</option>
-                  <option value="Q3">Q3</option>
-                  <option value="SR">Sprint</option>
-                  <option value="R">Race</option>
-                </select>
+                <select id="result-event-type"></select>
                 <small id="result-event-type-error" class="field-error hidden" role="alert">the race result already exists</small>
               </div>
               <div id="result-positions" class="position-grid"></div>
+              <button id="result-add-position-button" class="secondary-button hidden" type="button">Add position</button>
               <div id="fastest-lap-container" class="field-group hidden">
                 <label>
                   <input id="result-fastest-lap-toggle" type="checkbox" />
                   Award +1 point for fastest lap
                 </label>
-                <label for="result-fastest-lap-driver">Fastest lap driver</label>
-                <select id="result-fastest-lap-driver"></select>
               </div>
               <div class="action-row">
                 <button type="submit" class="primary-button">Save result</button>

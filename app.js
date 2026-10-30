@@ -13,6 +13,14 @@ const state = {
   resultEditId: null
 };
 
+const eventTypeLabels = {
+  Q1: 'Qualifying 1',
+  Q2: 'Qualifying 2',
+  Q3: 'Qualifying 3',
+  SR: 'Sprint Race',
+  R: 'Race'
+};
+
 const app = {
   init() {
     this.bindStaticEvents();
@@ -53,6 +61,7 @@ const app = {
     document.getElementById('forgot-password-button').addEventListener('click', this.forgotPassword.bind(this));
     document.getElementById('save-season-button').addEventListener('click', this.handleSeasonSave.bind(this));
     document.getElementById('create-season-button').addEventListener('click', () => this.prepareNewSeason());
+    document.getElementById('copy-season-button').addEventListener('click', this.copySelectedSeason.bind(this));
     document.getElementById('rename-season-button').addEventListener('click', () => this.prepareRenameSeason());
     document.getElementById('delete-season-button').addEventListener('click', this.deleteSelectedSeason.bind(this));
     document.getElementById('export-season-button').addEventListener('click', this.exportSeason.bind(this));
@@ -95,6 +104,22 @@ const app = {
     document.getElementById('result-form').addEventListener('submit', (event) => {
       event.preventDefault();
       this.saveResult();
+    });
+    document.getElementById('result-positions').addEventListener('input', (event) => {
+      if (event.target.matches('[data-laptime-mask]')) {
+        this.applyLapTimeMask(event.target);
+      }
+    });
+    document.getElementById('result-add-position-button').addEventListener('click', () => {
+      this.addResultPosition();
+    });
+    ['result-track-filter', 'result-event-type-filter'].forEach((filterId) => {
+      document.getElementById(filterId).addEventListener('change', () => this.renderResults());
+    });
+    document.getElementById('clear-result-filters').addEventListener('click', () => {
+      document.getElementById('result-track-filter').value = '';
+      document.getElementById('result-event-type-filter').value = '';
+      this.renderResults();
     });
 
     document.getElementById('add-driver-button').addEventListener('click', () => this.resetDriverForm());
@@ -220,11 +245,7 @@ const app = {
   renderSeasonSelector() {
     const select = document.getElementById('season-select');
     const currentId = state.activeSeasonId;
-    const options = [...state.seasons]
-      .sort((firstSeason, secondSeason) =>
-        (firstSeason.name || 'Unnamed season').localeCompare(secondSeason.name || 'Unnamed season', undefined, { sensitivity: 'base' })
-      )
-      .map((season) => `<option value="${season.id}">${this.escapeHtml(season.name || 'Unnamed season')}</option>`);
+    const options = state.seasons.map((season) => `<option value="${season.id}">${this.escapeHtml(season.name || 'Unnamed season')}</option>`);
     select.innerHTML = '<option value="">Select a season</option>' + options.join('');
     if (currentId && state.seasons.some((season) => season.id === currentId)) {
       select.value = currentId;
@@ -304,6 +325,21 @@ const app = {
       this.showMessage('Season created successfully.');
       this.selectSeason(ref.id);
     }
+  },
+
+  async copySelectedSeason() {
+    if (!this.ensureUserSignedIn()) return;
+    if (!state.activeSeason || !state.activeSeasonId) {
+      this.showMessage('Select a season to copy.', true);
+      return;
+    }
+
+    const copiedSeason = JSON.parse(JSON.stringify(state.activeSeason));
+    delete copiedSeason.id;
+    copiedSeason.name = `${state.activeSeason.name || 'Unnamed season'} - copy`;
+
+    await firebase.firestore().collection('seasons').add(copiedSeason);
+    this.showMessage('Season copied successfully.');
   },
 
   async deleteSelectedSeason() {
@@ -391,15 +427,15 @@ const app = {
       if (result) resultTrack.value = result.trackId || '';
     }
 
-    const fastestLapDriver = document.getElementById('result-fastest-lap-driver');
+    const resultEventType = document.getElementById('result-event-type');
+    const selectedEventType = resultEventType.value;
+    resultEventType.innerHTML = this.eventTypeOptionsMarkup();
+    if (eventTypeLabels[selectedEventType]) resultEventType.value = selectedEventType;
+
     const fastestLapToggle = document.getElementById('result-fastest-lap-toggle');
-    fastestLapDriver.innerHTML = '<option value="">No fastest lap</option>' + this.driverOptionsMarkup();
     if (state.resultEditId) {
       const result = season.results.find((entry) => entry.id === state.resultEditId);
-      if (result) {
-        fastestLapToggle.checked = Boolean(result.fastestLapAwarded);
-        if (result.fastestLapDriverId) fastestLapDriver.value = result.fastestLapDriverId;
-      }
+      fastestLapToggle.checked = Boolean(result && result.fastestLapAwarded);
     } else {
       fastestLapToggle.checked = false;
     }
@@ -407,46 +443,51 @@ const app = {
 
   countryOptionsMarkup() {
     const season = this.getSeasonData();
-    return [...this.getCountries(season)]
-      .sort((firstCountry, secondCountry) =>
-        (firstCountry.name || '').localeCompare(secondCountry.name || '', undefined, { sensitivity: 'base' })
-      )
-      .map((country) => `
+    const countries = [...this.getCountries(season)].sort((firstCountry, secondCountry) =>
+      (firstCountry.name || '').localeCompare(secondCountry.name || '', undefined, { sensitivity: 'base' })
+    );
+    return countries.map((country) => `
       <option value="${country.id}">${this.escapeHtml(country.name)}</option>
     `).join('') || '<option value="">No countries added</option>';
   },
 
   teamOptionsMarkup() {
     const season = this.getSeasonData();
-    return [...(season.teams || [])]
-      .sort((firstTeam, secondTeam) =>
-        (firstTeam.name || '').localeCompare(secondTeam.name || '', undefined, { sensitivity: 'base' })
-      )
-      .map((team) => `
+    const teams = [...(season.teams || [])].sort((firstTeam, secondTeam) =>
+      (firstTeam.name || '').localeCompare(secondTeam.name || '', undefined, { sensitivity: 'base' })
+    );
+    return teams.map((team) => `
       <option value="${team.id}">${this.escapeHtml(team.name)}</option>
     `).join('') || '<option value="">No teams added</option>';
   },
 
-  trackOptionsMarkup() {
+  trackOptionsMarkup(allTracksLabel = null) {
     const season = this.getSeasonData();
     const tracks = [...(season.tracks || [])].sort((firstTrack, secondTrack) =>
-      (firstTrack.name || '').localeCompare(secondTrack.name || '', undefined, { sensitivity: 'base' })
+      this.getCountryName(firstTrack.countryId).localeCompare(
+        this.getCountryName(secondTrack.countryId),
+        undefined,
+        { sensitivity: 'base' }
+      ) || (firstTrack.name || '').localeCompare(secondTrack.name || '', undefined, { sensitivity: 'base' })
     );
-    if (!tracks.length) return '<option value="">No tracks added</option>';
-    return '<option value="">Select a track</option>' + tracks.map((track) => `
-      <option value="${track.id}">${this.escapeHtml(track.name)}</option>
+    const placeholder = allTracksLabel || 'Select a track';
+    if (!tracks.length) return `<option value="">${allTracksLabel || 'No tracks added'}</option>`;
+    return `<option value="">${placeholder}</option>` + tracks.map((track) => `
+      <option value="${track.id}">${this.escapeHtml(this.getCountryName(track.countryId))} - ${this.escapeHtml(track.name)}</option>
     `).join('');
+  },
+
+  eventTypeOptionsMarkup(includeAllTypes = false) {
+    const allTypesOption = includeAllTypes ? '<option value="">All event types</option>' : '';
+    const eventTypeOptions = Object.entries(eventTypeLabels).map(([eventType, label]) => `
+      <option value="${eventType}">${this.escapeHtml(eventType)} - ${this.escapeHtml(label)}</option>
+    `).join('');
+    return allTypesOption + eventTypeOptions;
   },
 
   driverOptionsMarkup() {
     const season = this.getSeasonData();
-    return [...(season.drivers || [])]
-      .sort((firstDriver, secondDriver) => {
-        const firstName = `${firstDriver.firstname || ''} ${firstDriver.lastname || ''}`.trim();
-        const secondName = `${secondDriver.firstname || ''} ${secondDriver.lastname || ''}`.trim();
-        return firstName.localeCompare(secondName, undefined, { sensitivity: 'base' });
-      })
-      .map((driver) => `
+    return (season.drivers || []).map((driver) => `
       <option value="${driver.id}">${this.escapeHtml(`${driver.firstname} ${driver.lastname}`)}</option>
     `).join('') || '<option value="">No drivers added</option>';
   },
@@ -588,29 +629,80 @@ const app = {
     const list = document.getElementById('results-list');
     const season = this.getSeasonData();
     const results = season.results || [];
+    const trackFilter = document.getElementById('result-track-filter');
+    const eventTypeFilter = document.getElementById('result-event-type-filter');
+    const eventTypeOrder = { Q1: 0, Q2: 1, Q3: 2, SR: 3, R: 4 };
+
+    const selectedTrackId = trackFilter.value;
+    const selectedEventType = eventTypeFilter.value;
+    const tracks = season.tracks || [];
+    trackFilter.innerHTML = this.trackOptionsMarkup('All tracks');
+    if (tracks.some((track) => track.id === selectedTrackId)) trackFilter.value = selectedTrackId;
+
+    eventTypeFilter.innerHTML = this.eventTypeOptionsMarkup(true);
+    if (eventTypeLabels[selectedEventType]) eventTypeFilter.value = selectedEventType;
+
+    const filteredResults = results.filter((result) =>
+      (!trackFilter.value || result.trackId === trackFilter.value)
+      && (!eventTypeFilter.value || result.eventType === eventTypeFilter.value)
+    );
 
     if (!results.length) {
       list.innerHTML = '<div class="empty-state">No race results entered yet.</div>';
       return;
     }
+    if (!filteredResults.length) {
+      list.innerHTML = '<div class="empty-state">No race results match the selected filters.</div>';
+      return;
+    }
 
-    list.innerHTML = results.map((result) => {
-      const status = new Date(result.date) > new Date() ? 'Upcoming' : 'Completed';
-      const positions = (result.positions || []).map((position) => {
-        const dnfTag = position.dnf ? ' DNF' : '';
-        const driverName = this.getDriverName(position.driverId);
-        return `<span class="pos-pill">P${position.position || '-'} · ${this.escapeHtml(driverName)}${dnfTag}</span>`;
-      }).join('');
+    const sortedResults = [...filteredResults].sort((firstResult, secondResult) => {
+      const dateOrder = (secondResult.date || '').localeCompare(firstResult.date || '');
+      if (dateOrder !== 0) return dateOrder;
+      return (eventTypeOrder[firstResult.eventType] ?? Number.MAX_SAFE_INTEGER)
+        - (eventTypeOrder[secondResult.eventType] ?? Number.MAX_SAFE_INTEGER);
+    });
+
+    list.innerHTML = sortedResults.map((result) => {
+      const hasLapTimes = result.eventType === 'R' || result.eventType === 'SR';
+      const fastestLapPosition = hasLapTimes ? this.getFastestLapPosition(result) : null;
+      const positions = [...(result.positions || [])]
+        .sort((firstPosition, secondPosition) => {
+          return Number(firstPosition.position || 0) - Number(secondPosition.position || 0);
+        })
+        .map((position) => {
+          const driver = (season.drivers || []).find((entry) => entry.id === position.driverId);
+          const team = driver && (season.teams || []).find((entry) => entry.id === driver.teamId);
+          const driverName = driver ? `${driver.firstname} ${driver.lastname}` : '—';
+          const fastestLapIcon = fastestLapPosition === position
+            ? '<svg class="fastest-lap-icon" viewBox="0 0 24 24" role="img" aria-label="Fastest lap" title="Fastest lap"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>'
+            : '';
+
+          return `
+            <tr>
+              <td>P${position.position || '—'}</td>
+              <td>${this.escapeHtml(driverName)}</td>
+              <td>${this.escapeHtml(team ? `${team.name} - ${team.engine || 'N/A'}` : '—')}</td>
+              <td><span class="result-laptime">${this.escapeHtml(position.laptime || '—')}${fastestLapIcon}</span></td>
+            </tr>
+          `;
+        }).join('');
 
       return `
         <div class="result-card">
           <div class="result-header">
-            <span class="result-badge">${this.escapeHtml(result.eventType)}</span>
-            <span class="result-details">${this.escapeHtml(this.getTrackName(result.trackId))} · ${this.escapeHtml(result.date || 'No date')}</span>
+            <strong>${this.escapeHtml(this.getTrackName(result.trackId))} - ${this.escapeHtml(eventTypeLabels[result.eventType] || result.eventType)}</strong>
+            <span class="result-details">${this.escapeHtml(result.date || 'No date')}</span>
           </div>
-          <div class="result-details">${status} · Fastest lap: ${this.escapeHtml(this.getDriverName(result.fastestLapDriverId) || 'N/A')}</div>
-          <div class="result-positions">${positions || '<span class="pos-pill">No positions entered</span>'}</div>
-          <div class="item-actions" style="margin-top: 12px;">
+          <div class="result-table-wrapper">
+            <table class="standings-table result-table">
+              <thead>
+                <tr><th>Position</th><th>Driver</th><th>Team - Engine</th><th>Laptime</th></tr>
+              </thead>
+              <tbody>${positions || '<tr><td colspan="4">No results entered</td></tr>'}</tbody>
+            </table>
+          </div>
+          <div class="item-actions result-actions">
             <button class="secondary-button" type="button" data-result-edit="${result.id}">Edit</button>
             <button class="danger-button" type="button" data-result-delete="${result.id}">Delete</button>
           </div>
@@ -755,7 +847,7 @@ const app = {
         : { 1: 8, 2: 7, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1 };
 
       (result.positions || []).forEach((position) => {
-        if (!position || !position.driverId || position.dnf) return;
+        if (!position || !position.driverId) return;
         const entry = map.get(position.driverId);
         if (!entry) return;
         const positionValue = Number(position.position);
@@ -766,8 +858,11 @@ const app = {
         }
       });
 
-      if (result.eventType === 'R' && result.fastestLapDriverId && result.fastestLapAwarded) {
-        const entry = map.get(result.fastestLapDriverId);
+      const fastestLapPosition = result.eventType === 'R' && result.fastestLapAwarded
+        ? this.getFastestLapPosition(result)
+        : null;
+      if (fastestLapPosition && fastestLapPosition.driverId) {
+        const entry = map.get(fastestLapPosition.driverId);
         if (entry) entry.points += 1;
       }
     });
@@ -815,6 +910,57 @@ const app = {
     const season = this.getSeasonData();
     const track = (season.tracks || []).find((entry) => entry.id === trackId);
     return track ? track.name : 'Unknown track';
+  },
+
+  getFastestLapPosition(result) {
+    return (result.positions || []).reduce((fastestPosition, position) => {
+      if (!position.driverId) return fastestPosition;
+      const lapTime = this.parseLapTime(position.laptime);
+      if (lapTime === null) return fastestPosition;
+
+      const fastestLapTime = fastestPosition ? this.parseLapTime(fastestPosition.laptime) : null;
+      return fastestLapTime === null || lapTime < fastestLapTime ? position : fastestPosition;
+    }, null);
+  },
+
+  parseLapTime(laptime) {
+    const value = String(laptime || '').trim();
+    if (!value) return null;
+
+    const minutesAndSeconds = value.match(/^(\d+):([0-5]?\d)(?:\.(\d+))?$/);
+    if (minutesAndSeconds) {
+      const minutes = Number(minutesAndSeconds[1]);
+      const seconds = Number(`${minutesAndSeconds[2]}.${minutesAndSeconds[3] || '0'}`);
+      return minutes * 60 + seconds;
+    }
+
+    if (/^\d+(?:\.\d+)?$/.test(value)) {
+      const seconds = Number(value);
+      return Number.isFinite(seconds) ? seconds : null;
+    }
+
+    return null;
+  },
+
+  applyLapTimeMask(input) {
+    const caretPosition = input.selectionStart ?? input.value.length;
+    const digitsBeforeCaret = input.value.slice(0, caretPosition).replace(/\D/g, '').length;
+    let digits = input.value.replace(/\D/g, '').slice(0, 6);
+    if (digits.length > 1 && Number(digits[1]) > 5) {
+      digits = digits.slice(0, 1);
+    }
+    let maskedValue = digits.slice(0, 1);
+
+    if (digits.length > 1) maskedValue += `:${digits.slice(1, 3)}`;
+    if (digits.length > 3) maskedValue += `.${digits.slice(3)}`;
+
+    input.value = maskedValue;
+    const maskedCaretPosition = digitsBeforeCaret < 2
+      ? digitsBeforeCaret
+      : digitsBeforeCaret < 4
+        ? digitsBeforeCaret + 1
+        : digitsBeforeCaret + 2;
+    input.setSelectionRange(maskedCaretPosition, maskedCaretPosition);
   },
 
   getDriverName(driverId) {
@@ -1233,7 +1379,6 @@ const app = {
     document.getElementById('result-track').value = result.trackId || '';
     document.getElementById('result-date').value = result.date || '';
     document.getElementById('result-event-type').value = result.eventType || 'R';
-    document.getElementById('result-fastest-lap-driver').value = result.fastestLapDriverId || '';
     this.validateResultUniqueness();
     this.renderResultPositions(result);
   },
@@ -1264,45 +1409,33 @@ const app = {
   renderResultPositions(result = null) {
     const eventType = document.getElementById('result-event-type').value || 'R';
     const season = this.getSeasonData();
-    const positionCount = eventType === 'R' ? 10 : eventType === 'SR' ? 8 : 3;
     const resultData = result || (state.resultEditId ? (season.results || []).find((entry) => entry.id === state.resultEditId) : null);
     const fastestLapContainer = document.getElementById('fastest-lap-container');
-    const fastestLapDriver = document.getElementById('result-fastest-lap-driver');
     const fastestLapToggle = document.getElementById('result-fastest-lap-toggle');
-    fastestLapContainer.classList.toggle('hidden', eventType !== 'R');
-    if (eventType !== 'R') {
-      fastestLapToggle.checked = false;
-      fastestLapDriver.value = '';
-    }
-
+    fastestLapContainer.classList.toggle('hidden', eventType !== 'R' || Boolean(state.resultEditId));
+    if (eventType !== 'R') fastestLapToggle.checked = false;
     const existingPositions = resultData ? resultData.positions || [] : [];
-    const resultTrack = document.getElementById('result-track');
     const driverOptions = this.driverOptionsMarkup();
+    const standardPositionCount = eventType === 'R' ? 10 : eventType === 'SR' ? 8 : 3;
+    const highestExistingPosition = existingPositions.reduce(
+      (highest, position) => Math.max(highest, Number(position.position) || 0),
+      standardPositionCount
+    );
+    const positionCount = Math.max(standardPositionCount, highestExistingPosition);
+    const addPositionButton = document.getElementById('result-add-position-button');
+    addPositionButton.classList.toggle(
+      'hidden',
+      !state.resultEditId || !['Q1', 'Q2', 'Q3', 'SR', 'R'].includes(eventType)
+    );
 
     const cards = Array.from({ length: positionCount }, (_, index) => {
       const positionNumber = index + 1;
       const existingPosition = existingPositions.find((entry) => Number(entry.position) === positionNumber) || {};
-      const driverValue = existingPosition.driverId || '';
-      const lapValue = existingPosition.laptime || '';
-      const dnfChecked = existingPosition.dnf ? 'checked' : '';
-
-      return `
-        <div class="position-card">
-          <h4>Position ${positionNumber}</h4>
-          <div class="field-group">
-            <label>Driver</label>
-            <select id="pos-driver-${positionNumber}">${driverOptions.replace('<option value="">No drivers added</option>', '<option value="">Select a driver</option>')}</select>
-          </div>
-          <div class="field-group">
-            <label>Laptime</label>
-            <input id="pos-lap-${positionNumber}" type="text" value="${this.escapeAttribute(lapValue)}" placeholder="1:36.123" />
-          </div>
-          <label><input id="pos-dnf-${positionNumber}" type="checkbox" ${dnfChecked} /> DNF</label>
-        </div>
-      `;
+      return this.resultPositionCardMarkup(positionNumber, existingPosition, driverOptions);
     }).join('');
 
     document.getElementById('result-positions').innerHTML = cards;
+    document.querySelectorAll('[data-laptime-mask]').forEach((input) => this.applyLapTimeMask(input));
     Array.from({ length: positionCount }, (_, index) => {
       const positionNumber = index + 1;
       const existingPosition = existingPositions.find((entry) => Number(entry.position) === positionNumber) || {};
@@ -1311,14 +1444,39 @@ const app = {
         driverSelector.value = existingPosition.driverId || '';
       }
     });
+  },
 
-    if (resultData && resultData.fastestLapDriverId) {
-      fastestLapDriver.value = resultData.fastestLapDriverId;
-    }
+  resultPositionCardMarkup(positionNumber, existingPosition, driverOptions) {
+    return `
+      <div class="position-card" data-position="${positionNumber}">
+        <h4>Position ${positionNumber}</h4>
+        <div class="field-group">
+          <label>Driver</label>
+          <select id="pos-driver-${positionNumber}"><option value=""></option>${driverOptions}</select>
+        </div>
+        <div class="field-group">
+          <label>Laptime</label>
+          <input id="pos-lap-${positionNumber}" type="text" inputmode="numeric" maxlength="8" pattern="\\d:[0-5]\\d\\.\\d{3}" title="Enter a lap time as m:ss.mmm, for example 1:36.123" data-laptime-mask value="${this.escapeAttribute(existingPosition.laptime || '')}" placeholder="1:36.123" />
+        </div>
+      </div>
+    `;
+  },
 
-    if (resultTrack.value && !resultData) {
-      resultTrack.value = resultTrack.value;
-    }
+  addResultPosition() {
+    const eventType = document.getElementById('result-event-type').value;
+    if (!state.resultEditId || !['Q1', 'Q2', 'Q3', 'SR', 'R'].includes(eventType)) return;
+
+    const positionsContainer = document.getElementById('result-positions');
+    const currentPositions = positionsContainer.querySelectorAll('.position-card');
+    const nextPosition = Array.from(currentPositions).reduce(
+      (highest, card) => Math.max(highest, Number(card.dataset.position) || 0),
+      0
+    ) + 1;
+    positionsContainer.insertAdjacentHTML(
+      'beforeend',
+      this.resultPositionCardMarkup(nextPosition, {}, this.driverOptionsMarkup())
+    );
+    this.applyLapTimeMask(document.getElementById(`pos-lap-${nextPosition}`));
   },
 
   async saveResult() {
@@ -1345,27 +1503,29 @@ const app = {
     }
 
     const positions = [];
-    const positionCount = eventType === 'R' ? 10 : eventType === 'SR' ? 8 : 3;
+    const standardPositionCount = eventType === 'R' ? 10 : eventType === 'SR' ? 8 : 3;
+    const positionCount = Array.from(document.querySelectorAll('#result-positions .position-card'))
+      .reduce((highest, card) => Math.max(highest, Number(card.dataset.position) || 0), standardPositionCount);
 
     for (let positionNumber = 1; positionNumber <= positionCount; positionNumber += 1) {
       const driverSelector = document.getElementById(`pos-driver-${positionNumber}`);
       const lapInput = document.getElementById(`pos-lap-${positionNumber}`);
-      const dnfInput = document.getElementById(`pos-dnf-${positionNumber}`);
       const driverId = driverSelector ? driverSelector.value : '';
       const laptime = lapInput ? lapInput.value.trim() : '';
-      const dnf = dnfInput ? dnfInput.checked : false;
 
-      if (!driverId && !dnf) continue;
+      if (!driverId) continue;
       positions.push({
-        position: dnf ? null : positionNumber,
+        position: positionNumber,
         driverId,
-        laptime,
-        dnf
+        laptime
       });
     }
 
-    const fastestLapDriverId = eventType === 'R' ? document.getElementById('result-fastest-lap-driver').value || null : null;
-    const fastestLapAwarded = eventType === 'R' && document.getElementById('result-fastest-lap-toggle').checked && Boolean(fastestLapDriverId);
+    const existingResult = (season.results || []).find((entry) => entry.id === state.resultEditId);
+    const fastestLapAwarded = eventType === 'R'
+      && (state.resultEditId
+        ? Boolean(existingResult && existingResult.fastestLapAwarded)
+        : document.getElementById('result-fastest-lap-toggle').checked);
 
     const result = {
       id: state.resultEditId || this.generateId(),
@@ -1373,7 +1533,6 @@ const app = {
       date,
       eventType,
       positions,
-      fastestLapDriverId,
       fastestLapAwarded
     };
 
