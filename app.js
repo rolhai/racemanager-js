@@ -687,11 +687,14 @@ const app = {
             </tr>
           `;
         }).join('');
+      const wetConditionsIcon = result.wetConditions
+          ? '<svg class="wet-conditions-icon" viewBox="0 0 24 24" role="img" aria-label="Wet conditions" title="wet conditions"><path class="wet-cloud" d="M6 16.5h11a4 4 0 0 0 .4-8A6 6 0 0 0 6 9a3.75 3.75 0 0 0 0 7.5Z"></path><path class="rain-drops" d="m8 19-1 2m5-2-1 2m5-2-1 2"></path></svg>'
+        : '';
 
       return `
         <div class="result-card">
           <div class="result-header">
-            <strong>${this.escapeHtml(this.getTrackName(result.trackId))} - ${this.escapeHtml(eventTypeLabels[result.eventType] || result.eventType)}</strong>
+            <strong>${this.escapeHtml(this.getTrackName(result.trackId))} - ${this.escapeHtml(eventTypeLabels[result.eventType] || result.eventType)}${wetConditionsIcon}</strong>
             <span class="result-details">${this.escapeHtml(result.date || 'No date')}</span>
           </div>
           <div class="result-table-wrapper">
@@ -1398,6 +1401,7 @@ const app = {
     document.getElementById('result-track').value = result.trackId || '';
     document.getElementById('result-date').value = result.date || '';
     document.getElementById('result-event-type').value = result.eventType || 'R';
+    document.getElementById('result-wet-conditions').checked = Boolean(result.wetConditions);
     this.validateResultUniqueness();
     this.renderResultPositions(result);
   },
@@ -1552,6 +1556,7 @@ const app = {
       date,
       eventType,
       positions,
+      wetConditions: document.getElementById('result-wet-conditions').checked,
       fastestLapAwarded
     };
 

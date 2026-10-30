@@ -27,7 +27,9 @@ championship standings. Season data is stored in Firebase Firestore.
   type. Supported event types are Q1, Q2, Q3, sprint (SR), and race (R). Every
   result requires a track and date. Qualifying has positions 1–3, sprint has
   positions 1–8, and race has positions 1–10. Each position can store a
-  driver, laptime.
+  driver and laptime. Results can be marked as run in wet conditions; the
+  selection is saved on the result and shown as a blue rain-cloud icon next
+  to its title.
 - **Results list**: lists entered results and labels each as upcoming or
   completed based on whether its date is in the future. This is not a separate
   calendar of unentered races.
